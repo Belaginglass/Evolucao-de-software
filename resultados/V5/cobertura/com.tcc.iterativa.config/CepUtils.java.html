@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="pt"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CepUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">geracao-iterativa</a> &gt; <a href="index.source.html" class="el_package">com.tcc.iterativa.config</a> &gt; <span class="el_source">CepUtils.java</span></div><h1>CepUtils.java</h1><pre class="source lang-java linenums">package com.tcc.iterativa.config;
+
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.stereotype.Component;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+
+@Component
+<span class="fc" id="L13">public class CepUtils {</span>
+
+    public Map&lt;String, String&gt; buscarCep(String cepInput) {
+<span class="pc bpc" id="L16" title="1 of 2 branches missed.">        if (cepInput == null) return null;</span>
+<span class="fc" id="L17">        String cepLimpo = cepInput.replaceAll(&quot;\\D&quot;, &quot;&quot;);</span>
+
+        try {
+<span class="fc" id="L20">            ClassPathResource resource = new ClassPathResource(&quot;ceps.csv&quot;);</span>
+<span class="fc" id="L21">            try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {</span>
+                String linha;
+<span class="fc" id="L23">                boolean primeira = true;</span>
+<span class="pc bpc" id="L24" title="1 of 2 branches missed.">                while ((linha = reader.readLine()) != null) {</span>
+<span class="fc bfc" id="L25" title="All 2 branches covered.">                    if (primeira) {</span>
+<span class="fc" id="L26">                        primeira = false;</span>
+<span class="fc" id="L27">                        continue;</span>
+                    }
+<span class="fc" id="L29">                    String[] partes = linha.split(&quot;,&quot;);</span>
+<span class="pc bpc" id="L30" title="1 of 2 branches missed.">                    if (partes.length &gt;= 5) {</span>
+<span class="fc" id="L31">                        String csvCep = partes[0].trim();</span>
+<span class="pc bpc" id="L32" title="1 of 2 branches missed.">                        if (csvCep.equals(cepLimpo)) {</span>
+<span class="fc" id="L33">                            Map&lt;String, String&gt; endereco = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L34">                            endereco.put(&quot;cep&quot;, csvCep);</span>
+<span class="fc" id="L35">                            endereco.put(&quot;rua&quot;, partes[1].trim());</span>
+<span class="fc" id="L36">                            endereco.put(&quot;bairro&quot;, partes[2].trim());</span>
+<span class="fc" id="L37">                            endereco.put(&quot;cidade&quot;, partes[3].trim());</span>
+<span class="fc" id="L38">                            endereco.put(&quot;estado&quot;, partes[4].trim());</span>
+<span class="fc" id="L39">                            return endereco;</span>
+                        }
+                    }
+<span class="nc" id="L42">                }</span>
+<span class="fc" id="L43">            }</span>
+<span class="nc" id="L44">        } catch (Exception e) {</span>
+            // Tratar falha de leitura do CSV
+<span class="nc" id="L46">        }</span>
+<span class="nc" id="L47">        return null;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

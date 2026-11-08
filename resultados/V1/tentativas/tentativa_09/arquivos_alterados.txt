@@ -1,0 +1,12 @@
+Modificado	pom.xml
+Criado	src/main/java/com/tcc/iterativa/config/PasswordUtils.java
+Criado	src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+Criado	src/main/java/com/tcc/iterativa/controller/AuthController.java
+Criado	src/main/java/com/tcc/iterativa/model/Usuario.java
+Criado	src/main/java/com/tcc/iterativa/repository/UsuarioRepository.java
+Criado	src/main/java/com/tcc/iterativa/service/UsuarioService.java
+Criado	src/main/resources/templates/auth/login.html
+Criado	src/main/resources/templates/auth/nova-senha.html
+Criado	src/main/resources/templates/home/admin.html
+Criado	src/main/resources/templates/home/adotante.html
+Criado	src/test/java/com/tcc/iterativa/service/UsuarioServiceTest.java

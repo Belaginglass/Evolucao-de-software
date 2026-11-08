@@ -1,0 +1,45 @@
+{
+  "id_execucao": "I5-t03-d7f8731d",
+  "incremento": "I5",
+  "versao_anterior": "V4",
+  "versao_resultante": "V5",
+  "tentativa": 3,
+  "tipo": "correcao",
+  "modelo": "gemini-3.5-flash-lite",
+  "parametros": {
+    "temperature": 0.0,
+    "top_p": null,
+    "top_k": null,
+    "nota_parametros": "top_p/top_k não fixados explicitamente: com temperature=0 a amostragem é determinística (greedy), tornando-os irrelevantes para o resultado; não estimados nem inventados."
+  },
+  "formato_resposta": "json (caminho+conteúdo completo) — não unified diff (ver docstring do script para o motivo da mudança)",
+  "data_hora_inicio": "2026-11-06T02:40:37.763436+00:00",
+  "commit_base": "a9b3170a34fcd52a2ea4cab9fd520be16a69cb2d",
+  "data_hora_fim": "2026-11-06T02:40:42.568524+00:00",
+  "tempo_resposta_segundos": 4.813,
+  "sucesso_chamada": true,
+  "finish_reason": "STOP",
+  "tokens_entrada": 31043,
+  "tokens_saida": 1542,
+  "tokens_total": 32585,
+  "erros": [],
+  "json_extraido": true,
+  "arquivos_na_resposta": [
+    {
+      "caminho": "src/main/resources/templates/auth/cadastro.html",
+      "acao": "modificar"
+    }
+  ],
+  "alteracoes_aplicadas": true,
+  "arquivos_alterados": [
+    "Modificado\tsrc/main/java/com/tcc/iterativa/config/SecurityConfig.java",
+    "Modificado\tsrc/main/java/com/tcc/iterativa/controller/AuthController.java",
+    "Modificado\tsrc/main/java/com/tcc/iterativa/controller/UsuarioController.java",
+    "Modificado\tsrc/main/java/com/tcc/iterativa/model/Usuario.java",
+    "Modificado\tsrc/main/java/com/tcc/iterativa/service/UsuarioService.java",
+    "Modificado\tsrc/main/resources/templates/auth/cadastro.html",
+    "Modificado\tsrc/main/resources/templates/home/admin.html",
+    "Criado\tsrc/main/resources/templates/usuario/gerenciar.html",
+    "Criado\tsrc/test/java/com/tcc/iterativa/service/UsuarioServiceI5Test.java"
+  ]
+}

@@ -1,0 +1,580 @@
+diff --git a/src/main/java/com/tcc/iterativa/config/SecurityConfig.java b/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+index 89f9dac..6995f61 100644
+--- a/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
++++ b/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+@@ -16,7 +16,7 @@ public class SecurityConfig {
+             .csrf(csrf -> csrf.disable())
+             .authorizeHttpRequests(auth -> auth
+                 .requestMatchers("/", "/login", "/cadastro", "/recuperar-senha", "/atualizar-senha", "/buscar-cep", "/h2-console/**").permitAll()
+-                .requestMatchers("/animais/**").hasRole("ADMIN")
++                .requestMatchers("/animais/**", "/baias/**", "/home/sobre-nos", "/home/servicos/**", "/home/campanhas/**", "/home/doacoes/**").hasRole("ADMIN")
+                 .anyRequest().authenticated()
+             )
+             .formLogin(form -> form.disable());
+diff --git a/src/main/java/com/tcc/iterativa/controller/AuthController.java b/src/main/java/com/tcc/iterativa/controller/AuthController.java
+index 43461e8..039959d 100644
+--- a/src/main/java/com/tcc/iterativa/controller/AuthController.java
++++ b/src/main/java/com/tcc/iterativa/controller/AuthController.java
+@@ -31,7 +31,7 @@ public class AuthController {
+         this.usuarioService = usuarioService;
+     }
+ 
+-    @GetMapping({"/", "/login"})
++    @GetMapping("/login")
+     public String loginPage() {
+         return "auth/login";
+     }
+diff --git a/src/main/java/com/tcc/iterativa/controller/HomeController.java b/src/main/java/com/tcc/iterativa/controller/HomeController.java
+new file mode 100644
+index 0000000..dd858c7
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/controller/HomeController.java
+@@ -0,0 +1,125 @@
++package com.tcc.iterativa.controller;
++
++import com.tcc.iterativa.service.ConteudoHomeService;
++import org.springframework.security.core.Authentication;
++import org.springframework.stereotype.Controller;
++import org.springframework.ui.Model;
++import org.springframework.web.bind.annotation.GetMapping;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestParam;
++
++@Controller
++public class HomeController {
++
++    private final ConteudoHomeService conteudoHomeService;
++
++    public HomeController(ConteudoHomeService conteudoHomeService) {
++        this.conteudoHomeService = conteudoHomeService;
++    }
++
++    @GetMapping("/")
++    public String index(Model model) {
++        model.addAttribute("sobreNos", conteudoHomeService.obterSobreNos());
++        model.addAttribute("servicos", conteudoHomeService.selecionarAleatorio(conteudoHomeService.listarServicos(), 3));
++        model.addAttribute("campanhas", conteudoHomeService.selecionarAleatorio(conteudoHomeService.listarCampanhas(), 3));
++        model.addAttribute("doacoes", conteudoHomeService.selecionarAleatorio(conteudoHomeService.listarDoacoes(), 3));
++        return "index";
++    }
++
++    @GetMapping("/home/sobre-nos")
++    public String editarSobreNosForm(Authentication authentication, Model model) {
++        if (authentication == null) return "redirect:/login";
++        model.addAttribute("texto", conteudoHomeService.obterSobreNos());
++        return "home/editar-sobre";
++    }
++
++    @PostMapping("/home/sobre-nos")
++    public String salvarSobreNos(Authentication authentication, @RequestParam String texto, Model model) {
++        if (authentication == null) return "redirect:/login";
++        conteudoHomeService.salvarSobreNos(texto);
++        model.addAttribute("sucesso", "Texto 'sobre nós' atualizado com sucesso! [PRT-31]");
++        model.addAttribute("texto", texto);
++        return "home/editar-sobre";
++    }
++
++    @GetMapping("/home/servicos")
++    public String gerenciarServicos(Authentication authentication, Model model) {
++        if (authentication == null) return "redirect:/login";
++        model.addAttribute("servicos", conteudoHomeService.listarServicos());
++        return "home/editar-servicos";
++    }
++
++    @PostMapping("/home/servicos")
++    public String adicionarServico(Authentication authentication, @RequestParam String titulo, @RequestParam String descricao, Model model) {
++        if (authentication == null) return "redirect:/login";
++        try {
++            conteudoHomeService.salvarItem("SERVICO", titulo, descricao, null);
++            model.addAttribute("sucesso", "Serviço adicionado com sucesso! [PRT-32]");
++        } catch (Exception e) {
++            model.addAttribute("erro", e.getMessage());
++        }
++        model.addAttribute("servicos", conteudoHomeService.listarServicos());
++        return "home/editar-servicos";
++    }
++
++    @PostMapping("/home/servicos/deletar")
++    public String deletarServico(Authentication authentication, @RequestParam Long id) {
++        if (authentication == null) return "redirect:/login";
++        conteudoHomeService.deletarItem(id);
++        return "redirect:/home/servicos";
++    }
++
++    @GetMapping("/home/campanhas")
++    public String gerenciarCampanhas(Authentication authentication, Model model) {
++        if (authentication == null) return "redirect:/login";
++        model.addAttribute("campanhas", conteudoHomeService.listarCampanhas());
++        return "home/editar-campanhas";
++    }
++
++    @PostMapping("/home/campanhas")
++    public String adicionarCampanha(Authentication authentication, @RequestParam String titulo, @RequestParam String descricao, Model model) {
++        if (authentication == null) return "redirect:/login";
++        try {
++            conteudoHomeService.salvarItem("CAMPANHA", titulo, descricao, null);
++            model.addAttribute("sucesso", "Campanha adicionada com sucesso! [PRT-33]");
++        } catch (Exception e) {
++            model.addAttribute("erro", e.getMessage());
++        }
++        model.addAttribute("campanhas", conteudoHomeService.listarCampanhas());
++        return "home/editar-campanhas";
++    }
++
++    @PostMapping("/home/campanhas/deletar")
++    public String deletarCampanha(Authentication authentication, @RequestParam Long id) {
++        if (authentication == null) return "redirect:/login";
++        conteudoHomeService.deletarItem(id);
++        return "redirect:/home/campanhas";
++    }
++
++    @GetMapping("/home/doacoes")
++    public String gerenciarDoacoes(Authentication authentication, Model model) {
++        if (authentication == null) return "redirect:/login";
++        model.addAttribute("doacoes", conteudoHomeService.listarDoacoes());
++        return "home/editar-doacoes";
++    }
++
++    @PostMapping("/home/doacoes")
++    public String adicionarDoacao(Authentication authentication, @RequestParam String titulo, @RequestParam String valor, Model model) {
++        if (authentication == null) return "redirect:/login";
++        try {
++            conteudoHomeService.salvarItem("DOACAO", titulo, null, valor);
++            model.addAttribute("sucesso", "Valor de doação adicionado com sucesso! [PRT-34]");
++        } catch (Exception e) {
++            model.addAttribute("erro", e.getMessage());
++        }
++        model.addAttribute("doacoes", conteudoHomeService.listarDoacoes());
++        return "home/editar-doacoes";
++    }
++
++    @PostMapping("/home/doacoes/deletar")
++    public String deletarDoacao(Authentication authentication, @RequestParam Long id) {
++        if (authentication == null) return "redirect:/login";
++        conteudoHomeService.deletarItem(id);
++        return "redirect:/home/doacoes";
++    }
++}
+diff --git a/src/main/java/com/tcc/iterativa/model/ConteudoHome.java b/src/main/java/com/tcc/iterativa/model/ConteudoHome.java
+new file mode 100644
+index 0000000..55a0b19
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/model/ConteudoHome.java
+@@ -0,0 +1,46 @@
++package com.tcc.iterativa.model;
++
++import jakarta.persistence.*;
++
++@Entity
++@Table(name = "conteudo_home")
++public class ConteudoHome {
++
++    @Id
++    @GeneratedValue(strategy = GenerationType.IDENTITY)
++    private Long id;
++
++    @Column(nullable = false)
++    private String tipo; // "SOBRE", "SERVICO", "CAMPANHA", "DOACAO"
++
++    private String titulo;
++
++    @Column(columnDefinition = "TEXT")
++    private String descricao;
++
++    private String valor;
++
++    public ConteudoHome() {}
++
++    public ConteudoHome(String tipo, String titulo, String descricao, String valor) {
++        this.tipo = tipo;
++        this.titulo = titulo;
++        this.descricao = descricao;
++        this.valor = valor;
++    }
++
++    public Long getId() { return id; }
++    public void setId(Long id) { this.id = id; }
++
++    public String getTipo() { return tipo; }
++    public void setTipo(String tipo) { this.tipo = tipo; }
++
++    public String getTitulo() { return titulo; }
++    public void setTitulo(String titulo) { this.titulo = titulo; }
++
++    public String getDescricao() { return descricao; }
++    public void setDescricao(String descricao) { this.descricao = descricao; }
++
++    public String getValor() { return valor; }
++    public void setValor(String valor) { this.valor = valor; }
++}
+diff --git a/src/main/java/com/tcc/iterativa/repository/ConteudoHomeRepository.java b/src/main/java/com/tcc/iterativa/repository/ConteudoHomeRepository.java
+new file mode 100644
+index 0000000..e9ccf63
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/repository/ConteudoHomeRepository.java
+@@ -0,0 +1,11 @@
++package com.tcc.iterativa.repository;
++
++import com.tcc.iterativa.model.ConteudoHome;
++import org.springframework.data.jpa.repository.JpaRepository;
++import org.springframework.stereotype.Repository;
++import java.util.List;
++
++@Repository
++public interface ConteudoHomeRepository extends JpaRepository<ConteudoHome, Long> {
++    List<ConteudoHome> findByTipo(String tipo);
++}
+diff --git a/src/main/java/com/tcc/iterativa/service/ConteudoHomeService.java b/src/main/java/com/tcc/iterativa/service/ConteudoHomeService.java
+new file mode 100644
+index 0000000..ee74469
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/service/ConteudoHomeService.java
+@@ -0,0 +1,71 @@
++package com.tcc.iterativa.service;
++
++import com.tcc.iterativa.model.ConteudoHome;
++import com.tcc.iterativa.repository.ConteudoHomeRepository;
++import org.springframework.stereotype.Service;
++
++import java.util.Collections;
++import java.util.List;
++import java.util.stream.Collectors;
++
++@Service
++public class ConteudoHomeService {
++
++    private final ConteudoHomeRepository repository;
++
++    public ConteudoHomeService(ConteudoHomeRepository repository) {
++        this.repository = repository;
++    }
++
++    public String obterSobreNos() {
++        List<ConteudoHome> list = repository.findByTipo("SOBRE");
++        if (!list.isEmpty()) {
++            return list.get(0).getDescricao();
++        }
++        return "DogTech - Sistema de Gerenciamento de Adoção.";
++    }
++
++    public void salvarSobreNos(String texto) {
++        List<ConteudoHome> list = repository.findByTipo("SOBRE");
++        ConteudoHome sobre;
++        if (!list.isEmpty()) {
++            sobre = list.get(0);
++        } else {
++            sobre = new ConteudoHome();
++            sobre.setTipo("SOBRE");
++        }
++        sobre.setDescricao(texto);
++        repository.save(sobre);
++    }
++
++    public List<ConteudoHome> listarServicos() {
++        return repository.findByTipo("SERVICO");
++    }
++
++    public List<ConteudoHome> listarCampanhas() {
++        return repository.findByTipo("CAMPANHA");
++    }
++
++    public List<ConteudoHome> listarDoacoes() {
++        return repository.findByTipo("DOACAO");
++    }
++
++    public void salvarItem(String tipo, String titulo, String descricao, String valor) {
++        if (titulo == null || titulo.trim().isEmpty()) {
++            throw new IllegalArgumentException("O título é obrigatório.");
++        }
++        ConteudoHome item = new ConteudoHome(tipo, titulo, descricao, valor);
++        repository.save(item);
++    }
++
++    public void deletarItem(Long id) {
++        repository.deleteById(id);
++    }
++
++    public List<ConteudoHome> selecionarAleatorio(List<ConteudoHome> lista, int max) {
++        if (lista == null || lista.isEmpty()) return Collections.emptyList();
++        List<ConteudoHome> copia = lista.stream().collect(Collectors.toList());
++        Collections.shuffle(copia);
++        return copia.stream().limit(max).collect(Collectors.toList());
++    }
++}
+diff --git a/src/main/resources/templates/home/admin.html b/src/main/resources/templates/home/admin.html
+index 08fe65e..6d681a6 100644
+--- a/src/main/resources/templates/home/admin.html
++++ b/src/main/resources/templates/home/admin.html
+@@ -3,9 +3,17 @@
+ <head><meta charset="UTF-8"><title>Home Admin</title></head>
+ <body>
+     <h1>Bem-vindo à Tela Inicial Administrativa [PRT-2]</h1>
++    <p><a href="/">Ver Página Inicial Pública</a></p>
+     <p><a href="/meus-dados">Meus Dados (UC011)</a></p>
+     <p><a href="/animais/novo">Cadastrar Animal (UC003 / RF002)</a></p>
+     <p><a href="/baias">Gerenciar Baias (RF008)</a></p>
++    <hr>
++    <h3>Gerenciamento da Página Inicial (UC009)</h3>
++    <p><a href="/home/sobre-nos">Editar Texto 'Sobre Nós' [PRT-31]</a></p>
++    <p><a href="/home/servicos">Gerenciar Serviços [PRT-32]</a></p>
++    <p><a href="/home/campanhas">Gerenciar Campanhas [PRT-33]</a></p>
++    <p><a href="/home/doacoes">Gerenciar Doações [PRT-34]</a></p>
++    <hr>
+     <a href="/login">Sair</a>
+ </body>
+ </html>
+diff --git a/src/main/resources/templates/home/editar-campanhas.html b/src/main/resources/templates/home/editar-campanhas.html
+new file mode 100644
+index 0000000..c47466d
+--- /dev/null
++++ b/src/main/resources/templates/home/editar-campanhas.html
+@@ -0,0 +1,30 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head><meta charset="UTF-8"><title>Gerenciar Campanhas [PRT-33]</title></head>
++<body>
++    <h2>Gerenciar Campanhas [PRT-33]</h2>
++    <div th:if="${sucesso}" style="color: green;"><p th:text="${sucesso}"></p></div>
++    <div th:if="${erro}" style="color: red;"><p th:text="${erro}"></p></div>
++
++    <form action="/home/campanhas" method="post">
++        <label>Título:</label>
++        <input type="text" name="titulo" required><br><br>
++        <label>Descrição:</label>
++        <textarea name="descricao" required></textarea><br><br>
++        <button type="submit">Adicionar Campanha</button>
++    </form>
++
++    <hr>
++    <h3>Campanhas Cadastradas</h3>
++    <ul>
++        <li th:each="c : ${campanhas}">
++            <span th:text="${c.titulo} + ': ' + ${c.descricao}"></span>
++            <form action="/home/campanhas/deletar" method="post" style="display:inline;">
++                <input type="hidden" name="id" th:value="${c.id}">
++                <button type="submit">Deletar</button>
++            </form>
++        </li>
++    </ul>
++    <br><a href="/home-admin">Voltar</a>
++</body>
++</html>
+diff --git a/src/main/resources/templates/home/editar-doacoes.html b/src/main/resources/templates/home/editar-doacoes.html
+new file mode 100644
+index 0000000..073f6af
+--- /dev/null
++++ b/src/main/resources/templates/home/editar-doacoes.html
+@@ -0,0 +1,30 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head><meta charset="UTF-8"><title>Gerenciar Doações [PRT-34]</title></head>
++<body>
++    <h2>Gerenciar Doações [PRT-34]</h2>
++    <div th:if="${sucesso}" style="color: green;"><p th:text="${sucesso}"></p></div>
++    <div th:if="${erro}" style="color: red;"><p th:text="${erro}"></p></div>
++
++    <form action="/home/doacoes" method="post">
++        <label>Título / Descrição da Doação:</label>
++        <input type="text" name="titulo" required><br><br>
++        <label>Valor Sugerido (R$):</label>
++        <input type="text" name="valor" required><br><br>
++        <button type="submit">Adicionar Valor</button>
++    </form>
++
++    <hr>
++    <h3>Valores Cadastrados</h3>
++    <ul>
++        <li th:each="d : ${doacoes}">
++            <span th:text="${d.titulo} + ' - R$ ' + ${d.valor}"></span>
++            <form action="/home/doacoes/deletar" method="post" style="display:inline;">
++                <input type="hidden" name="id" th:value="${d.id}">
++                <button type="submit">Deletar</button>
++            </form>
++        </li>
++    </ul>
++    <br><a href="/home-admin">Voltar</a>
++</body>
++</html>
+diff --git a/src/main/resources/templates/home/editar-servicos.html b/src/main/resources/templates/home/editar-servicos.html
+new file mode 100644
+index 0000000..0fad10a
+--- /dev/null
++++ b/src/main/resources/templates/home/editar-servicos.html
+@@ -0,0 +1,30 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head><meta charset="UTF-8"><title>Gerenciar Serviços [PRT-32]</title></head>
++<body>
++    <h2>Gerenciar Serviços [PRT-32]</h2>
++    <div th:if="${sucesso}" style="color: green;"><p th:text="${sucesso}"></p></div>
++    <div th:if="${erro}" style="color: red;"><p th:text="${erro}"></p></div>
++
++    <form action="/home/servicos" method="post">
++        <label>Título:</label>
++        <input type="text" name="titulo" required><br><br>
++        <label>Descrição:</label>
++        <textarea name="descricao" required></textarea><br><br>
++        <button type="submit">Adicionar Serviço</button>
++    </form>
++
++    <hr>
++    <h3>Serviços Cadastrados</h3>
++    <ul>
++        <li th:each="s : ${servicos}">
++            <span th:text="${s.titulo} + ': ' + ${s.descricao}"></span>
++            <form action="/home/servicos/deletar" method="post" style="display:inline;">
++                <input type="hidden" name="id" th:value="${s.id}">
++                <button type="submit">Deletar</button>
++            </form>
++        </li>
++    </ul>
++    <br><a href="/home-admin">Voltar</a>
++</body>
++</html>
+diff --git a/src/main/resources/templates/home/editar-sobre.html b/src/main/resources/templates/home/editar-sobre.html
+new file mode 100644
+index 0000000..939cfa1
+--- /dev/null
++++ b/src/main/resources/templates/home/editar-sobre.html
+@@ -0,0 +1,13 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head><meta charset="UTF-8"><title>Editar Sobre Nós [PRT-31]</title></head>
++<body>
++    <h2>Editar Texto 'Sobre Nós' [PRT-31]</h2>
++    <div th:if="${sucesso}" style="color: green;"><p th:text="${sucesso}"></p></div>
++    <form action="/home/sobre-nos" method="post">
++        <textarea name="texto" rows="5" cols="50" th:text="${texto}" required></textarea><br><br>
++        <button type="submit">Salvar</button>
++        <a href="/home-admin"><button type="button">Voltar</button></a>
++    </form>
++</body>
++</html>
+diff --git a/src/main/resources/templates/index.html b/src/main/resources/templates/index.html
+new file mode 100644
+index 0000000..9a905a4
+--- /dev/null
++++ b/src/main/resources/templates/index.html
+@@ -0,0 +1,42 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Página Inicial [PRT-2 / PRT-3]</title>
++</head>
++<body>
++    <h1>DogTech - Sistema de Gerenciamento de Adoção</h1>
++    <p><a href="/login">Entrar / Cadastrar</a></p>
++
++    <hr>
++    <h2>Sobre Nós [PRT-31]</h2>
++    <p th:text="${sobreNos}"></p>
++
++    <hr>
++    <h2>Serviços [PRT-32]</h2>
++    <ul>
++        <li th:each="s : ${servicos}">
++            <strong th:text="${s.titulo}"></strong>: <span th:text="${s.descricao}"></span>
++        </li>
++        <li th:if="${servicos.empty}">Nenhum serviço cadastrado.</li>
++    </ul>
++
++    <hr>
++    <h2>Campanhas [PRT-33]</h2>
++    <ul>
++        <li th:each="c : ${campanhas}">
++            <strong th:text="${c.titulo}"></strong>: <span th:text="${c.descricao}"></span>
++        </li>
++        <li th:if="${campanhas.empty}">Nenhuma campanha cadastrada.</li>
++    </ul>
++
++    <hr>
++    <h2>Doações [PRT-34]</h2>
++    <ul>
++        <li th:each="d : ${doacoes}">
++            <strong th:text="${d.titulo}"></strong> - Valor: R$ <span th:text="${d.valor}"></span>
++        </li>
++        <li th:if="${doacoes.empty}">Nenhuma opção de doação cadastrada.</li>
++    </ul>
++</body>
++</html>
+diff --git a/src/test/java/com/tcc/iterativa/service/ConteudoHomeServiceTest.java b/src/test/java/com/tcc/iterativa/service/ConteudoHomeServiceTest.java
+new file mode 100644
+index 0000000..3e21690
+--- /dev/null
++++ b/src/test/java/com/tcc/iterativa/service/ConteudoHomeServiceTest.java
+@@ -0,0 +1,74 @@
++package com.tcc.iterativa.service;
++
++import com.tcc.iterativa.model.ConteudoHome;
++import com.tcc.iterativa.repository.ConteudoHomeRepository;
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.context.SpringBootTest;
++
++import java.util.List;
++
++import static org.junit.jupiter.api.Assertions.*;
++
++@SpringBootTest
++class ConteudoHomeServiceTest {
++
++    @Autowired
++    private ConteudoHomeService service;
++
++    @Autowired
++    private ConteudoHomeRepository repository;
++
++    @BeforeEach
++    void setUp() {
++        repository.deleteAll();
++    }
++
++    @Test
++    void testSalvarEObterSobreNos() {
++        service.salvarSobreNos(
++            "ONG DogTech de Proteção Animal."
++        );
++        String sobre = service.obterSobreNos();
++        assertEquals(
++            "ONG DogTech de Proteção Animal.",
++            sobre
++        );
++    }
++
++    @Test
++    void testAdicionarESelecionarServico() {
++        service.salvarItem(
++            "SERVICO",
++            "Castração",
++            "Mutirão de castração gratuita.",
++            null
++        );
++        List<ConteudoHome> servicos = service.listarServicos();
++        assertEquals(1, servicos.size());
++        assertEquals(
++            "Castração",
++            servicos.get(0).getTitulo()
++        );
++
++        List<ConteudoHome> aleatorios =
++            service.selecionarAleatorio(servicos, 3);
++        assertEquals(1, aleatorios.size());
++    }
++
++    @Test
++    void testAdicionarDoacaoFalhaTituloVazio() {
++        assertThrows(
++            IllegalArgumentException.class,
++            () -> {
++                service.salvarItem(
++                    "DOACAO",
++                    "",
++                    null,
++                    "50.00"
++                );
++            }
++        );
++    }
++}

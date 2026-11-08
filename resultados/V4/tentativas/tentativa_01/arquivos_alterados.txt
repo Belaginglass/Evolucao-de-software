@@ -1,0 +1,13 @@
+Modificado	src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+Modificado	src/main/java/com/tcc/iterativa/controller/AuthController.java
+Criado	src/main/java/com/tcc/iterativa/controller/HomeController.java
+Criado	src/main/java/com/tcc/iterativa/model/ConteudoHome.java
+Criado	src/main/java/com/tcc/iterativa/repository/ConteudoHomeRepository.java
+Criado	src/main/java/com/tcc/iterativa/service/ConteudoHomeService.java
+Modificado	src/main/resources/templates/home/admin.html
+Criado	src/main/resources/templates/home/editar-campanhas.html
+Criado	src/main/resources/templates/home/editar-doacoes.html
+Criado	src/main/resources/templates/home/editar-servicos.html
+Criado	src/main/resources/templates/home/editar-sobre.html
+Criado	src/main/resources/templates/index.html
+Criado	src/test/java/com/tcc/iterativa/service/ConteudoHomeServiceTest.java

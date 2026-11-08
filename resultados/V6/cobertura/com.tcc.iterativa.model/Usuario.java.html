@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="pt"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Usuario.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">geracao-iterativa</a> &gt; <a href="index.source.html" class="el_package">com.tcc.iterativa.model</a> &gt; <span class="el_source">Usuario.java</span></div><h1>Usuario.java</h1><pre class="source lang-java linenums">package com.tcc.iterativa.model;
+
+import jakarta.persistence.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = &quot;usuarios&quot;)
+public class Usuario {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true, nullable = false)
+    private String email;
+
+    @Column(nullable = false)
+    private String senha;
+
+    @Column(nullable = false)
+    private String salt;
+
+    @Column(nullable = false)
+    private String papel; // DIRETOR_GERAL, GESTOR_ADOCAO, ou ADOTANTE
+
+    private String statusAdmin; // ATIVO ou DESABILITADO
+
+    private String tokenRecuperacao;
+    private LocalDateTime validadeToken;
+
+    // Novos campos para RN002 / UC002 / UC011
+    private String nome;
+    
+    @Column(unique = true)
+    private String cpf;
+    
+    private LocalDate dataNascimento;
+    
+    private String telefones;
+    
+    private String rua;
+    private String numero;
+    private String complemento;
+    private String bairro;
+    private String cidade;
+    private String estado;
+    private String cep;
+    
+    @Column(columnDefinition = &quot;TEXT&quot;)
+    private String foto;
+    
+    private String voluntario; // &quot;Sim&quot; ou &quot;Não&quot;
+    
+    private LocalDateTime dataUltimaAlteracao;
+
+<span class="fc" id="L57">    public Usuario() {}</span>
+
+<span class="fc" id="L59">    public Usuario(String email, String senha, String salt, String papel) {</span>
+<span class="fc" id="L60">        this.email = email;</span>
+<span class="fc" id="L61">        this.senha = senha;</span>
+<span class="fc" id="L62">        this.salt = salt;</span>
+<span class="fc" id="L63">        this.papel = papel;</span>
+<span class="fc" id="L64">        this.statusAdmin = &quot;ATIVO&quot;;</span>
+<span class="fc" id="L65">    }</span>
+
+<span class="fc" id="L67">    public Long getId() { return id; }</span>
+<span class="nc" id="L68">    public void setId(Long id) { this.id = id; }</span>
+
+<span class="fc" id="L70">    public String getEmail() { return email; }</span>
+<span class="nc" id="L71">    public void setEmail(String email) { this.email = email; }</span>
+
+<span class="fc" id="L73">    public String getSenha() { return senha; }</span>
+<span class="fc" id="L74">    public void setSenha(String senha) { this.senha = senha; }</span>
+
+<span class="fc" id="L76">    public String getSalt() { return salt; }</span>
+<span class="fc" id="L77">    public void setSalt(String salt) { this.salt = salt; }</span>
+
+<span class="fc" id="L79">    public String getPapel() { return papel; }</span>
+<span class="fc" id="L80">    public void setPapel(String papel) { this.papel = papel; }</span>
+
+<span class="nc" id="L82">    public String getStatusAdmin() { return statusAdmin; }</span>
+<span class="fc" id="L83">    public void setStatusAdmin(String statusAdmin) { this.statusAdmin = statusAdmin; }</span>
+
+<span class="nc" id="L85">    public String getTokenRecuperacao() { return tokenRecuperacao; }</span>
+<span class="fc" id="L86">    public void setTokenRecuperacao(String tokenRecuperacao) { this.tokenRecuperacao = tokenRecuperacao; }</span>
+
+<span class="fc" id="L88">    public LocalDateTime getValidadeToken() { return validadeToken; }</span>
+<span class="fc" id="L89">    public void setValidadeToken(LocalDateTime validadeToken) { this.validadeToken = validadeToken; }</span>
+
+<span class="fc" id="L91">    public String getNome() { return nome; }</span>
+<span class="fc" id="L92">    public void setNome(String nome) { this.nome = nome; }</span>
+
+<span class="fc" id="L94">    public String getCpf() { return cpf; }</span>
+<span class="fc" id="L95">    public void setCpf(String cpf) { this.cpf = cpf; }</span>
+
+<span class="nc" id="L97">    public LocalDate getDataNascimento() { return dataNascimento; }</span>
+<span class="fc" id="L98">    public void setDataNascimento(LocalDate dataNascimento) { this.dataNascimento = dataNascimento; }</span>
+
+<span class="nc" id="L100">    public String getTelefones() { return telefones; }</span>
+<span class="fc" id="L101">    public void setTelefones(String telefones) { this.telefones = telefones; }</span>
+
+<span class="nc" id="L103">    public String getRua() { return rua; }</span>
+<span class="fc" id="L104">    public void setRua(String rua) { this.rua = rua; }</span>
+
+<span class="nc" id="L106">    public String getNumero() { return numero; }</span>
+<span class="fc" id="L107">    public void setNumero(String numero) { this.numero = numero; }</span>
+
+<span class="nc" id="L109">    public String getComplemento() { return complemento; }</span>
+<span class="fc" id="L110">    public void setComplemento(String complemento) { this.complemento = complemento; }</span>
+
+<span class="nc" id="L112">    public String getBairro() { return bairro; }</span>
+<span class="fc" id="L113">    public void setBairro(String bairro) { this.bairro = bairro; }</span>
+
+<span class="fc" id="L115">    public String getCidade() { return cidade; }</span>
+<span class="fc" id="L116">    public void setCidade(String cidade) { this.cidade = cidade; }</span>
+
+<span class="nc" id="L118">    public String getEstado() { return estado; }</span>
+<span class="fc" id="L119">    public void setEstado(String estado) { this.estado = estado; }</span>
+
+<span class="nc" id="L121">    public String getCep() { return cep; }</span>
+<span class="fc" id="L122">    public void setCep(String cep) { this.cep = cep; }</span>
+
+<span class="nc" id="L124">    public String getFoto() { return foto; }</span>
+<span class="fc" id="L125">    public void setFoto(String foto) { this.foto = foto; }</span>
+
+<span class="nc" id="L127">    public String getVoluntario() { return voluntario; }</span>
+<span class="fc" id="L128">    public void setVoluntario(String voluntario) { this.voluntario = voluntario; }</span>
+
+<span class="nc" id="L130">    public LocalDateTime getDataUltimaAlteracao() { return dataUltimaAlteracao; }</span>
+<span class="fc" id="L131">    public void setDataUltimaAlteracao(LocalDateTime dataUltimaAlteracao) { this.dataUltimaAlteracao = dataUltimaAlteracao; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,32 @@
+INCREMENTO I6 — Solicitação de adoção
+
+Implemente o caso de uso UC005 (Pedido de Adoção), descrito em detalhe no bloco
+"REQUISITOS DO INCREMENTO I6" desta mesma solicitação, e nenhuma outra
+funcionalidade. Não implemente avaliação/aprovação do pedido (isso é do
+Incremento I7) — apenas a criação do pedido com estado inicial "aguardando".
+
+Use a entidade Animal já existente (I3). Crie uma entidade Adocao (ou
+PedidoAdocao) com: animal, adotante (Usuario), estado (ex.: "AGUARDANDO",
+"REPROVADO", "AGUARDANDO_VISITA", "DESISTENCIA", "ADOTADO", "DEVOLVIDO",
+"REVOGADO" — RN004, mas neste incremento só "AGUARDANDO" é criado; os demais
+estados existem no modelo para os próximos incrementos usarem), data do pedido.
+
+Funcionalidades:
+- Página pública/adotante de pesquisa de animais disponíveis para adoção
+  (filtrando disponivelAdocao="Sim", omitindo os em tratamento e os patrimônios
+  tombados — RN006). Não precisa de filtros de busca sofisticados, só listar.
+- Visualização do perfil de um animal específico.
+- Qualquer visitante pode ver; para registrar interesse em adotar (aceitar o
+  termo de adoção e criar o pedido), o ator precisa estar autenticado — se não
+  estiver, redirecione para login e, após autenticar, retorne ao fluxo.
+- Um pedido de adoção começa com estado "AGUARDANDO" (RN004) e entra na fila de
+  adoção (RN008): a fila agrupa por animal, com pedidos mais antigos primeiro.
+
+Lembre-se das lições dos incrementos anteriores:
+- Restrinja rotas administrativas (se houver) com hasRole no SecurityConfig;
+  rotas de visualização pública de animais devem ficar acessíveis sem login
+  (adicione ao permitAll), mas a CRIAÇÃO do pedido de adoção exige login.
+- Não use @Lob/BLOB para nada.
+- Teste manualmente (é esperado que eu também valide) se um adotante consegue
+  mesmo completar o fluxo fim-a-fim: ver animal → aceitar termo → pedido criado
+  com estado AGUARDANDO.

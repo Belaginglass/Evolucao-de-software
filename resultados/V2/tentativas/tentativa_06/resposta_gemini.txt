@@ -1,0 +1,20 @@
+```json
+{
+  "arquivos": [
+    {
+      "caminho": "src/main/java/com/tcc/iterativa/config/SecurityConfig.java",
+      "acao": "modificar",
+      "conteudo": "package com.tcc.iterativa.config;\n\nimport org.springframework.context.annotation.Bean;\nimport org.springframework.context.annotation.Configuration;\nimport org.springframework.security.config.annotation.web.builders.HttpSecurity;\nimport org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;\nimport org.springframework.security.web.SecurityFilterChain;\n\n@Configuration\n@EnableWebSecurity\npublic class SecurityConfig {\n\n    @Bean\n    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {\n        http\n            .csrf(csrf -> csrf.disable())\n            .authorizeHttpRequests(auth -> auth\n                .requestMatchers(\"/\", \"/login\", \"/cadastro\", \"/recuperar-senha\", \"/atualizar-senha\", \"/buscar-cep\", \"/h2-console/**\").permitAll()\n                .anyRequest().authenticated()\n            )\n            .formLogin(form -> form.disable());\n        \n        return http.build();\n    }\n}\n"
+    }
+  ]
+}
+```
+
+(a) Arquivos modificados:
+- `src/main/java/com/tcc/iterativa/config/SecurityConfig.java`
+
+(b) Identificadores de requisitos atendidos:
+- `RNF002` (Busca de CEP acessível publicamente durante o cadastro)
+
+(c) Suposições feitas:
+- Nenhuma suposição adicional foi necessária, pois o erro apontava diretamente para a necessidade de incluir `/buscar-cep` na lista de rotas públicas (`permitAll`) dentro do arquivo `SecurityConfig.java`.

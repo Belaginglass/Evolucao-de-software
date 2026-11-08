@@ -1,0 +1,558 @@
+PROMPT-BASE — Experimento "Evolução do Código Gerado por um LLM ao Longo de Iterações"
+Sistema: DogTech (Sistema de Gerenciamento de Adoção — SGA)
+
+Este texto é enviado como contexto fixo em TODAS as solicitações ao Gemini a partir do
+incremento I1 (a versão V0 é construída manualmente pelo pesquisador, sem o LLM, e NÃO
+usa este prompt-base). A cada incremento, este prompt-base é combinado com o prompt
+específico do incremento (I1.txt, I2.txt, ..., I10.txt) e com o estado atual do
+código-fonte do projeto.
+
+1. FONTE DE ESPECIFICAÇÃO
+- A única fonte de requisitos é o documento "Requisitos_e_Casos_de_Uso.pdf" (SGA/DogTech).
+  Não crie, suponha ou complete requisitos funcionais, não funcionais, regras de negócio
+  ou casos de uso que não estejam explicitamente no documento ou nos arquivos de
+  incremento fornecidos (requisitos/incrementos/I1.md a I10.md).
+- O Apêndice C (requisitos/apendice_c_esclarecimentos.md), enviado junto com esta
+  solicitação, registra toda decisão de interpretação já tomada para lacunas e
+  inconsistências do documento original (ex.: página única de autenticação, busca de
+  CEP local). Siga essas decisões; não as questione nem proponha alternativas.
+- Quando o documento original for omisso ou ambíguo sobre um detalhe de implementação
+  NÃO coberto pelo Apêndice C (ex.: nomes exatos de colunas, formatos de tela não
+  especificados), escolha a solução mais simples e direta, e sinalize a suposição feita
+  na resposta — essa suposição poderá ser incorporada ao Apêndice C posteriormente.
+
+2. ESCOPO DO INCREMENTO
+- Implemente APENAS as funcionalidades descritas no prompt específico deste incremento.
+- NÃO implemente funcionalidades previstas para incrementos futuros, mesmo que pareçam
+  relacionadas ou convenientes de antecipar.
+- Preserve todas as funcionalidades já implementadas nos incrementos anteriores. Não
+  remova, reescreva ou altere comportamento existente, exceto quando isso for necessário
+  para atender ao requisito do incremento atual ou corrigir um defeito explicitamente
+  apontado pelo pesquisador.
+- Trabalhe sobre o código-fonte atual fornecido (estado mais recente do repositório Git),
+  nunca reconstruindo o sistema do zero.
+
+3. ARQUITETURA E ORGANIZAÇÃO DO CÓDIGO (RNF003 — válido desde o V0)
+- Stack fixa do projeto: Java 17, Spring Boot 3.x, Maven, SQLite (via spring-boot-starter
+  -data-jpa + driver org.xerial:sqlite-jdbc + hibernate-community-dialects), Thymeleaf
+  para as views.
+- Siga o padrão MVC: controladores em com.tcc.iterativa.controller, nunca com lógica de
+  negócio.
+- Camada de serviço (SOA) em com.tcc.iterativa.service: toda regra de negócio e
+  orquestração ficam aqui, nunca diretamente no controlador.
+- Camada DAO em com.tcc.iterativa.repository, usando interfaces Spring Data JPA.
+- Entidades JPA em com.tcc.iterativa.model. DTOs (quando necessários) em
+  com.tcc.iterativa.dto. Classes de configuração (beans, segurança, etc.) em
+  com.tcc.iterativa.config.
+- Não crie camadas, módulos ou abstrações adicionais além dessas quatro, salvo
+  necessidade explícita do requisito.
+
+4. REQUISITOS TRANSVERSAIS (válidos desde o V0 — ver requisitos/incrementos/requisitos_transversais.md)
+- RNF001 (Criptografia do sistema): toda senha criada ou alterada, em qualquer
+  funcionalidade, deve ser armazenada com hash SHA-256 e salt de 8 bits. Use um único
+  componente/bean reaproveitado por todas as funcionalidades que manipulam senha —
+  nunca implemente essa rotina mais de uma vez.
+- RN001 (Validação de e-mail e senha): e-mail deve conter apenas letras A-Z, dígitos 0-9
+  e exatamente um "@", sem os caracteres < > " ' / \ : |; senha deve ter no mínimo 8
+  caracteres e não conter esses mesmos caracteres proibidos. Use um único validador
+  compartilhado por todas as telas que recebem e-mail/senha.
+- RNF008 (Campo de ajuda): sempre que um campo de formulário tiver um ícone "?", ele deve
+  exibir uma informação de ajuda sobre como preenchê-lo. Siga essa convenção em toda
+  tela criada, em qualquer incremento.
+- RNF005 (Alterar estados): mudanças de estado do sistema (estado da adoção, processo de
+  aceite de um novo usuário administrativo, entre outros previstos no documento) devem
+  ser implementadas com o padrão de projeto State — nunca com cadeias de if/else ou
+  switch soltos representando o estado.
+- RN009 (Gerência de agendas): quando a funcionalidade do incremento exigir uma agenda
+  (ex.: ao conceder privilégio administrativo, ao agendar visita, ao agendar prestação de
+  serviço), reaproveite um único serviço de agenda. Não implemente lógicas de agenda
+  separadas para cada caso de uso.
+
+5. INTERPRETAÇÕES ADOTADAS PARA ESTE EXPERIMENTO
+- Página única de autenticação (decisão da seção 3.2 do artigo): embora o <RF001> do
+  documento original descreva duas páginas de autenticação (pública/adotante e
+  administrativa restrita por URL), este experimento usa UMA ÚNICA página de
+  autenticação (login, cadastro e recuperação de senha no mesmo ponto de entrada). O
+  redirecionamento por nível de acesso ocorre DEPOIS do login (RN010), não na escolha de
+  qual página acessar.
+- Busca de CEP (RNF002) sem API externa: em vez de consultar uma API de CEP (Postmon ou
+  similar) pela internet, use o arquivo src/main/resources/ceps.csv como fonte local de
+  dados de endereço. Esse CSV tem as colunas: cep (8 dígitos, sem hífen), rua, bairro,
+  cidade, estado. Ao implementar a busca de CEP (nos incrementos que a utilizam —
+  cadastro de usuário e, conforme citado no documento original, UC004), faça a consulta
+  a esse arquivo local, carregado como recurso do classpath, em vez de uma chamada HTTP
+  externa. Isso evita dependência de rede durante a geração e execução automatizada dos
+  testes ao longo do experimento.
+
+6. REGISTRO E RASTREABILIDADE
+- Ao final de cada resposta, liste explicitamente: (a) os arquivos criados ou
+  modificados; (b) os identificadores exatos dos requisitos funcionais, não funcionais e
+  regras de negócio atendidos neste incremento (ex.: RF001, RNF001, RN001); (c) qualquer
+  suposição ou simplificação feita por ausência de detalhe no documento original.
+- Não faça alterações além do escopo informado nesta solicitação e no prompt específico
+  do incremento.
+
+7. TESTES E COBERTURA (avaliação funcional — ver resultados/protocolo_avaliacao_funcional.md)
+- Para cada funcionalidade implementada neste incremento, escreva testes automatizados
+  (JUnit, executáveis via `mvn test`) cobrindo pelo menos um cenário de sucesso e um de
+  falha, alinhados aos casos de teste de testes/casos_teste.xlsx quando existir um
+  correspondente.
+- Não altere nem remova testes de incrementos anteriores para fazer a suíte acumulada
+  passar artificialmente. Se um teste anterior falhar por causa de uma mudança
+  necessária neste incremento, explique o motivo na resposta (não apenas apague ou
+  enfraqueça o teste).
+- Ao final da resposta, informe também: quantos testes novos foram adicionados, e se a
+  suíte completa (`mvn test`) passou ou não ao final desta alteração.
+
+
+===== APÊNDICE C — ESCLARECIMENTOS E DECISÕES DE INTERPRETAÇÃO =====
+# Apêndice C — Esclarecimentos e decisões de interpretação
+
+Este apêndice consolida toda decisão de interpretação tomada neste experimento sobre
+pontos em que o documento de requisitos original (*Requisitos_e_Casos_de_Uso.pdf*) é
+ambíguo, incompleto ou internamente inconsistente. Nenhuma decisão aqui cria um
+requisito novo — todas resolvem uma lacuna ou inconsistência já presente no documento
+-fonte, de forma explícita e rastreável, conforme a seção 3.2 do artigo
+("Eventuais limitações ou decisões presentes na especificação serão registradas, de
+modo a preservar a rastreabilidade entre os requisitos e o comportamento observado").
+
+Este arquivo é enviado ao Gemini em toda chamada (seção 8.2 do protocolo de geração),
+junto com o prompt-base e o prompt específico do incremento, para que as mesmas
+decisões sejam aplicadas de forma consistente em todos os incrementos.
+
+## C.1 — Página única de autenticação (afeta I1 / RF001 / UC001)
+
+O `<RF001>` do documento original descreve duas páginas de autenticação: uma pública
+(menu principal, cadastro de adotante) e outra restrita, acessível apenas por URL
+direta (cadastro administrativo). Para este experimento, usa-se **uma única página de
+autenticação** — login, cadastro e recuperação de senha no mesmo ponto de entrada. O
+redirecionamento por nível de acesso ocorre **depois** do login (`<RN010>`), não na
+escolha de qual página acessar.
+
+Fonte da decisão: seção 3.2 do artigo. Detalhado em `requisitos/incrementos/I1.md`.
+
+## C.2 — Busca de CEP via arquivo local, sem API externa (afeta I2 / RNF002)
+
+A `<RNF002>` do documento original prevê consultar uma API externa de CEP (Postmon ou
+similar). Para este experimento, usa-se o arquivo `Projeto/src/main/resources/ceps.csv`
+(colunas: `cep` — 8 dígitos, sem hífen —, `rua`, `bairro`, `cidade`, `estado`) como
+fonte local, eliminando a dependência de rede durante a geração e execução
+automatizada dos testes ao longo do experimento. A implementação da busca de CEP deve
+consultar esse arquivo (carregado do classpath), nunca fazer uma chamada HTTP externa.
+
+Fonte da decisão: decisão do pesquisador durante a construção do V0 (ver
+`resultados/V0/registro_V0.md`). Dados do CSV coletados de fontes públicas reais
+referentes a Juiz de Fora/MG (sede da SJPA, conforme o histórico de revisão do
+documento original).
+
+## C.3 — Lacuna: não existe `RF007` no documento original
+
+A seção 4 (Requisitos Funcionais) do documento original salta de `<RF006>` para
+`<RF008>` — não há um `RF007`. Isso não é uma omissão desta extração; é uma lacuna do
+próprio documento-fonte. Nenhum requisito foi criado para preencher esse número.
+
+## C.4 — Inconsistência na `<RNF002>`: citação de "UC02 e UC04"
+
+O texto da `<RNF002>` ("Busca de CEP") cita literalmente que a busca de CEP ocorre
+"nos cadastros especificados no UC02 e UC04". UC002 (Cadastro) de fato tem campos de
+endereço (`<RN002>`). UC004 (Manter Privilégio dos Atores), porém, não possui nenhum
+campo de endereço em seus fluxos descritos — a citação ao UC004 é mantida tal como
+está no documento original (possível erro de numeração de uma revisão anterior do
+documento-fonte), sem reinterpretação. Ao implementar I5 (UC004), **não** é esperado
+que exista busca de CEP, a menos que uma revisão futura do documento original
+esclareça essa referência.
+
+## C.5 — Inconsistência de numeração na regra citada para geração do token de recuperação de senha (afeta I1)
+
+No fluxo `[FA-1]` do `<UC001>`, o passo 2 cita "RN006" como a regra que define a
+geração do token de recuperação de senha (UUID de 32 caracteres, validade de 24h). O
+conteúdo descrito corresponde, na verdade, à `<RN005>` ("Trocar senha") — `<RN006>`
+trata de "Ordem da listagem de animais", um assunto não relacionado. Para a
+implementação, usa-se o conteúdo da `<RN005>` (geração via `UUID.randomUUID()`,
+validade de 24h), não o número literal "RN006" citado no texto.
+
+## C.6 — Requisitos sem `RFxxx` numerado, derivados da seção 2.2 (Requisitos dos usuários)
+
+Três funcionalidades não têm um `<RFxxx>` numerado dedicado na seção 4 do documento
+original, apenas uma menção na lista de "Requisitos dos usuários" (seção 2.2):
+
+- "Manter página inicial" (afeta I4 / UC009) — `[ATR-01] Manter página inicial.`
+- "Manter eventos" (afeta I10 / UC012) — `[ATR-01] Manter eventos.`
+- "Manter relatórios" (afeta I10 / UC014) — `[ATR-01] Manter relatórios.` e
+  `[ATR-02] Manter relatórios.`
+
+Para essas três, a especificação funcional usada é o próprio caso de uso (UC009,
+UC012, UC014) descrito na seção 6 do documento original — não um RF numerado.
+
+## C.7 — `UC014` (Manter relatórios) não especifica quais relatórios devem existir
+
+O documento original diz apenas que "o sistema deverá prover uma página com
+relatórios... contendo dados que sejam interessantes para os gestores em específico",
+sem listar quais relatórios ou quais dados. Para I10, a implementação deve prover uma
+página de relatórios funcional, mas o conteúdo exato de cada relatório é uma decisão de
+implementação em aberto — qualquer relatório implementado deve usar apenas dados já
+existentes no sistema (ex.: contagem de adoções por estado, animais cadastrados por
+espécie), nunca inventar uma fonte de dados nova só para preencher a tela.
+
+## C.8 — Requisitos transversais válidos desde o V0
+
+Ver `requisitos/incrementos/requisitos_transversais.md` para a lista completa
+(`RNF001`, `RNF003`, `RNF005`, `RNF008`, `RN001`, `RN009`) — não repetida aqui para
+evitar duplicidade; o prompt-base já referencia esse arquivo diretamente.
+
+
+===== REQUISITOS DO INCREMENTO I1 =====
+# Incremento 1 — Autenticação e controle inicial de acesso
+
+**Caso de uso:** UC001 — Autenticação
+
+> Fonte: *Requisitos_e_Casos_de_Uso.pdf* (Levantamento de Requisitos — DogTech/SGA), seção 6, p. 19-24.
+
+## UC001 — Autenticação
+
+**Descrição:** o sistema deve possuir uma página para acessar a área privada, onde é possível se cadastrar, autenticar-se e recuperar senha. A autenticação é feita por e-mail e senha, validados conforme `<RN001>`. Existem duas páginas de autenticação (RF001): uma pública, acessível pelo menu, para cadastro de adotante; outra acessível apenas via URL direta, para cadastro administrativo.
+
+**Atores:** Não se aplica (visitante não autenticado).
+
+**Precondições:** Não estar autenticado.
+
+**Pós-condições:** Recuperar o acesso ao sistema **ou** criar novo usuário no sistema.
+
+### Fluxo Básico
+1. Ator acessa a página de autenticação do sistema.
+2. Sistema retorna `[PRT-1]` (Autenticação).
+3. Se o ator clicar em "esqueceu sua senha?" → segue `[FA-1]`. Se preencher e-mail/senha e clicar "Entrar" → continua o fluxo básico.
+4. Sistema valida os dados conforme `<RN001>`; se inválidos → `[FE-1]`. Se válidos, retorna a página inicial conforme o privilégio do ator: administrativo → `[PRT-2]`; adotante → `[PRT-3]` (menus diferentes). A escolha do conteúdo exibido nessas páginas segue `<RN010>`.
+
+### Fluxo Alternativo — `[FA-1]` Recuperar senha
+1. Ator preenche seu e-mail e clica "recuperar" (`[PRT-4]`).
+2. Sistema busca o registro pelo e-mail; se existir, gera um identificador único (token) e salva junto às informações do ator, enviando um link por e-mail para `[PRT-5]`.
+3. Ator acessa o e-mail e abre o link.
+4. Sistema valida se o token ainda está dentro do prazo de validade; se expirado, informa o ator; se válido, retorna `[PRT-5]`.
+5. Ator preenche a nova senha e clica "enviar".
+6. Sistema localiza o usuário pelo token, salva a nova senha no banco e retorna para `[PRT-1]`.
+
+### Fluxo Alternativo — `[FA-2]` Primeiro acesso via cadastro automático
+1. Usuário com adoção cadastrada manualmente no sistema acessa a página de login.
+2. Sistema retorna `[PRT-1]`.
+3. Adotante preenche e-mail e a senha gerada automaticamente, clica "entrar".
+4. Sistema verifica os dados; se incorretos → `[FE-1]`; se corretos, direciona para `[PRT-5]` para cadastro de nova senha.
+5. Adotante digita a nova senha e clica "enviar".
+6. Sistema salva a nova senha e direciona o adotante para a página inicial `[PRT-3]`.
+
+### Fluxo de Exceção — `[FE-1]` Validação
+1. Inicia na tentativa de validação dos campos de entrada submetidos.
+2. Sistema retorna à tela atual mantendo os valores preenchidos e adiciona um alerta em cada campo preenchido incorretamente, informando a forma correta de preenchimento.
+
+### Protótipos de tela referenciados (não reproduzidos aqui — ver documento original)
+`[PRT-1]` Autenticação · `[PRT-2]` Tela inicial administrativa · `[PRT-3]` Tela inicial do adotante · `[PRT-4]` Recuperação de senha · `[PRT-5]` Inserção de nova senha.
+
+---
+
+## Requisito Funcional relacionado
+
+**`<RF001>` Autenticação**
+> "O sistema deve possuir duas páginas para autenticação, em ambas deverá ser possível autenticar-se, recuperar senha e cadastrar-se, porém uma só será acessada diretamente por uma URL e outra ficará disponível no menu principal do site. A página que ficará acessível apenas via URL deverá fornecer um cadastro administrativo e a outra um cadastro apenas de adotante. A autenticação será por meio de e-mail e senha em ambas páginas de autenticação."
+
+### Decisão de interpretação adotada no experimento (seção 3.2 do artigo)
+A seção 3.2 da metodologia do artigo (*artigo_sbc*) registra explicitamente: *"O desenvolvimento será realizado a partir de uma única página de autenticação, conforme a interpretação definida para o requisito correspondente."* Ou seja, para este experimento o `<RF001>` é implementado com **uma única página de autenticação** (login, cadastro e recuperação de senha no mesmo ponto de entrada), em vez das duas páginas distintas (pública/adotante e administrativa restrita por URL) descritas literalmente no documento original. O texto do requisito acima é mantido na íntegra por fidelidade e rastreabilidade ao documento-fonte; a simplificação para uma única página é uma decisão metodológica do experimento, não uma alteração do requisito original. O fluxo básico do UC001 descrito nesta seção já é compatível com essa interpretação, pois a distinção de menu/redirecionamento por privilégio ocorre **depois** do login, via `<RN010>`, e não na escolha de qual página de login acessar.
+
+## Requisitos Não Funcionais relacionados
+
+**`<RNF003>` Arquitetura do software** *(transversal — ver `requisitos_transversais.md`, necessário desde V0)*
+> "O sistema deverá ser construído respeitando os princípios do MVC (Model, View e Controller), também deverá existir uma camada SOA (Service Oriented Architecture), o padrão DAO também deverá ser adotado."
+
+**`<RNF008>` Campo de ajuda** *(transversal — ver `requisitos_transversais.md`, necessário desde V0)*
+> "Sempre que um ícone '?' existir deve haver uma informação que ajude o usuário a preencher ou entender aquele campo ou ação."
+
+**`<RNF001>` Criptografia do sistema** *(transversal — aplica-se à senha definida/alterada neste UC)*
+> "Todas as senhas do sistema deverão ser criptografadas com o algoritmo SHA-256 e um salt de 8 bits antes de serem salvas no banco de dados."
+
+## Regras de Negócio relacionadas
+
+**`<RN001>` Validação de e-mail e senha**
+> "1. E-mail: a. Conter apenas letras de A à Z; b. Números de 0 a 9; c. Uma ocorrência do caractere @; d. Não possuir nenhum dos caracteres a seguir: <, >, \", ', /, \\, :, |. 2. Senha: a. Conter no mínimo oito (8) caracteres; b. Não possuir nenhum dos caracteres a seguir: <, >, \", ', /, \\, :, |."
+
+**`<RN005>` Trocar senha**
+> "O identificador único (token) para troca de senha deverá ser gerado utilizando do método randomUUID da classe UUID do pacote útil do Java, este método retornará uma String com 32 caracteres única. Este token deve ser válido por apenas 24 horas, para isso deverá ser salvo no banco o dia da alteração de senha junto ao token gerado."
+
+**`<RN010>` Escolha de dados na tela inicial do sistema** *(detalhada no Incremento 4 — UC009; citada aqui por reger a tela de destino pós-login)*
+> "Na tela inicial do sistema que pode ser vista nos protótipos [PRT-2] e [PRT-3] o sistema deverá escolher aleatoriamente os serviços, campanhas, valores para doação e animais a serem exibidos."
+
+## Observações de fidelidade ao documento original
+- No passo 2 do fluxo `[FA-1]`, o documento cita "RN006" como a regra que define a geração do token de recuperação de senha. O conteúdo descrito (UUID de 32 caracteres, validade de 24h) corresponde, no entanto, à regra `<RN005>` ("Trocar senha"), já que `<RN006>` trata de "Ordem da listagem de animais" — um assunto não relacionado. Optou-se por manter aqui a referência a `<RN005>`, por coerência de conteúdo, sinalizando a inconsistência de numeração encontrada no documento-fonte sem alterar o teor do requisito.
+- A existência de duas páginas de autenticação distintas (ver `<RF001>` acima) **não** é implementada neste experimento — ver "Decisão de interpretação adotada no experimento" nesta mesma seção, conforme definido na seção 3.2 do artigo.
+
+
+===== PROMPT ESPECÍFICO DO INCREMENTO I1 =====
+INCREMENTO I1 — Autenticação e controle inicial de acesso
+
+Implemente o caso de uso UC001 (Autenticação), descrito em detalhe no bloco
+"REQUISITOS DO INCREMENTO I1" desta mesma solicitação, e nenhuma outra funcionalidade.
+
+Lembre-se, em especial (ver Apêndice C para o texto completo de cada item):
+- C.1: uma única página de autenticação (não as duas do texto literal do RF001).
+- C.5: o token de recuperação de senha segue o conteúdo da RN005 (UUID de 32
+  caracteres, validade de 24h), independentemente do número "RN006" citado no fluxo
+  [FA-1] do documento original.
+
+Ao final desta etapa, deve ser possível: cadastrar-se (dados mínimos para criar uma
+sessão — o cadastro completo de usuário, RN002, é implementado apenas no Incremento
+I2; aqui, crie o necessário para autenticar, mesmo que o cadastro completo venha
+depois), autenticar-se com e-mail/senha, recuperar senha esquecida, e ser redirecionado
+à página inicial correspondente ao nível de acesso (RN010) — mesmo que a página
+inicial em si (Incremento I4) ainda não exista; nesse caso, redirecione para uma rota
+provisória simples, documentando essa suposição na resposta.
+
+
+===== ESTADO ATUAL DO PROJETO (Projeto/) =====
+===== ARQUIVO: pom.xml =====
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.16</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.tcc.iterativa</groupId>
+    <artifactId>geracao-iterativa</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>geracao-iterativa</name>
+    <description>Projeto de TCC - Geracao iterativa de codigo</description>
+    <packaging>jar</packaging>
+
+    <properties>
+        <java.version>17</java.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- Hibernate nao traz dialeto para SQLite por padrao; este modulo fornece o SQLiteDialect -->
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-community-dialects</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.12</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Versao fixada (etapa 6.2): analise estatica complementar via SonarQube.
+                 Uso: mvn sonar:sonar -Dsonar.host.url=<url> -Dsonar.token=<token>
+                      -Dsonar.projectKey=dogtech -Dsonar.projectVersion=Vn -->
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>5.1.0.4751</version>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/config/package-info.java =====
+/**
+ * Classes de configuração transversais do sistema (ex.: codificação de senha —
+ * {@code RNF001} —, carregamento do {@code ceps.csv} — {@code RNF002} —, e demais
+ * beans de infraestrutura). Pacote mantido vazio no V0; as configurações concretas são
+ * adicionadas a partir dos incrementos (I1 em diante), à medida que cada requisito
+ * transversal passa a ser exercitado por uma funcionalidade.
+ */
+package com.tcc.iterativa.config;
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/controller/package-info.java =====
+/**
+ * Camada de apresentação (MVC) — controladores responsáveis por receber requisições HTTP,
+ * delegar o processamento à camada de serviço e selecionar a view (Thymeleaf) de resposta.
+ * Pacote mantido vazio no V0, conforme {@code RNF003} (arquitetura MVC/SOA/DAO); os
+ * controladores concretos são adicionados a partir dos incrementos (I1 em diante).
+ */
+package com.tcc.iterativa.controller;
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/dto/package-info.java =====
+/**
+ * Objetos de transferência de dados (DTOs) entre as camadas de controle, serviço e as
+ * views Thymeleaf. Pacote mantido vazio no V0; os DTOs concretos são adicionados a
+ * partir dos incrementos (I1 em diante), conforme necessário.
+ */
+package com.tcc.iterativa.dto;
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/GeracaoIterativaApplication.java =====
+package com.tcc.iterativa;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class GeracaoIterativaApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(GeracaoIterativaApplication.class, args);
+    }
+
+}
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/model/package-info.java =====
+/**
+ * Entidades de domínio (JPA) do sistema DogTech. Pacote mantido vazio no V0; as
+ * entidades concretas (Usuario, Animal, Adocao, etc.) são adicionadas a partir dos
+ * incrementos (I1 em diante), conforme os requisitos e regras de negócio correspondentes.
+ */
+package com.tcc.iterativa.model;
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/repository/package-info.java =====
+/**
+ * Camada de acesso a dados (DAO), implementada com repositórios Spring Data JPA sobre
+ * o banco SQLite. Pacote mantido vazio no V0, conforme {@code RNF003}; os repositórios
+ * concretos são adicionados a partir dos incrementos (I1 em diante), conforme as
+ * entidades de {@code model} forem introduzidas.
+ */
+package com.tcc.iterativa.repository;
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/service/package-info.java =====
+/**
+ * Camada de serviço (SOA) — regras de negócio do sistema, orquestrando acesso aos
+ * repositórios e demais serviços. Pacote mantido vazio no V0, conforme {@code RNF003};
+ * os serviços concretos são adicionados a partir dos incrementos (I1 em diante).
+ */
+package com.tcc.iterativa.service;
+
+
+===== ARQUIVO: src/main/resources/application.properties =====
+spring.application.name=geracao-iterativa
+
+spring.datasource.url=jdbc:sqlite:data/geracao-iterativa.db
+spring.datasource.driver-class-name=org.sqlite.JDBC
+
+spring.jpa.database-platform=org.hibernate.community.dialect.SQLiteDialect
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+
+
+===== ARQUIVO: src/main/resources/ceps.csv =====
+cep,rua,bairro,cidade,estado
+36050000,Rua Américo Lobo,Bairu,Juiz de Fora,MG
+36050010,Rua Professor Teodoro Coelho,Bairu,Juiz de Fora,MG
+36050100,Praça Olavo Costa,Bairu,Juiz de Fora,MG
+36050190,Rua José Ribeiro,Bairu,Juiz de Fora,MG
+36080280,Rua Edgard de Paiva Aguiar,Cerâmica,Juiz de Fora,MG
+36080300,Rua Martinho Gonçalves,Cerâmica,Juiz de Fora,MG
+36080350,Avenida Olavo Bilac,Cerâmica,Juiz de Fora,MG
+36080410,Rua Nicolau Capelli,Cerâmica,Juiz de Fora,MG
+36045130,Rua Vitório Saggioro,Centenário,Juiz de Fora,MG
+36045150,Rua Alves Júnior,Centenário,Juiz de Fora,MG
+36045230,Rua João Lourenço,Centenário,Juiz de Fora,MG
+36045300,Rua Oscar Ribeiro,Centenário,Juiz de Fora,MG
+36072010,Rua Coronel Assis,Floresta,Juiz de Fora,MG
+36072050,Avenida Paulista,Floresta,Juiz de Fora,MG
+36072100,Rua das Laranjeiras,Floresta,Juiz de Fora,MG
+36072120,Rua Ipê,Floresta,Juiz de Fora,MG
+36050240,Rua Arthur Ângelo Petrato,Progresso,Juiz de Fora,MG
+36050280,Rua Humberto Valério,Progresso,Juiz de Fora,MG
+36050420,Rua Carlos Drummond de Andrade,Progresso,Juiz de Fora,MG
+36050450,Rua Geraldo Marques de Oliveira,Progresso,Juiz de Fora,MG
+36091000,Avenida Pedro Timponi,Nova Benfica,Juiz de Fora,MG
+36091030,Rua José Ribeiro de Mattos,Nova Benfica,Juiz de Fora,MG
+36091100,Rua Abel Rafael Pinto,Nova Benfica,Juiz de Fora,MG
+36091160,Rua Antônio Gatas Bara,Nova Benfica,Juiz de Fora,MG
+
+
+===== ARQUIVO: src/test/java/com/tcc/iterativa/GeracaoIterativaApplicationTests.java =====
+package com.tcc.iterativa;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class GeracaoIterativaApplicationTests {
+
+    @Test
+    void contextLoads() {
+    }
+
+}
+
+
+
+===== RESTRIÇÕES E CRITÉRIOS DE CONCLUSÃO DA RESPOSTA =====
+RESTRIÇÕES E CRITÉRIOS DE CONCLUSÃO DA RESPOSTA
+- Responda com um ÚNICO bloco de código ```json contendo exatamente este formato,
+  e nada além disso dentro do bloco:
+  {
+    "arquivos": [
+      {"caminho": "src/main/java/com/tcc/iterativa/.../Foo.java",
+       "acao": "criar" | "modificar" | "remover",
+       "conteudo": "<conteúdo TEXTUAL COMPLETO do arquivo, já com o resultado final;"
+                   " omitido/vazio quando acao=remover>"}
+    ]
+  }
+- "caminho" é relativo à raiz do projeto Spring Boot (Projeto/), com barras "/",
+  nunca ".." nem caminho absoluto. Deve começar com "src/" ou ser exatamente
+  "pom.xml" — não modifique nenhum outro arquivo.
+- "conteudo" é o arquivo INTEIRO já modificado (não um diff, não um trecho) — para
+  "modificar", repita também as partes que não mudaram.
+- Não gere um unified diff. Não inclua texto explicativo dentro do bloco ```json```.
+  Qualquer observação, suposição ou lista de requisitos atendidos deve vir DEPOIS do
+  bloco, em texto normal.
+- Ao final, fora do bloco de código, liste: (a) arquivos criados/modificados/
+  removidos; (b) os identificadores de requisitos atendidos (RF/RNF/RN); (c)
+  suposições feitas.
+

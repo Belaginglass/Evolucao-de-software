@@ -1,0 +1,61 @@
+{
+  "component": {
+    "key": "dogtech",
+    "name": "DogTech - SGA (TCC)",
+    "description": "Projeto de TCC - Geracao iterativa de codigo",
+    "qualifier": "TRK",
+    "measures": [
+      {
+        "metric": "coverage",
+        "value": "46.5",
+        "bestValue": false
+      },
+      {
+        "metric": "bugs",
+        "value": "1",
+        "bestValue": false
+      },
+      {
+        "metric": "complexity",
+        "value": "377"
+      },
+      {
+        "metric": "code_smells",
+        "value": "2",
+        "bestValue": false
+      },
+      {
+        "metric": "duplicated_lines_density",
+        "value": "0.0",
+        "bestValue": true
+      },
+      {
+        "metric": "functions",
+        "value": "210"
+      },
+      {
+        "metric": "cognitive_complexity",
+        "value": "179",
+        "bestValue": false
+      },
+      {
+        "metric": "classes",
+        "value": "25"
+      },
+      {
+        "metric": "ncloc",
+        "value": "1527"
+      },
+      {
+        "metric": "vulnerabilities",
+        "value": "1",
+        "bestValue": false
+      },
+      {
+        "metric": "sqale_index",
+        "value": "40",
+        "bestValue": false
+      }
+    ]
+  }
+}

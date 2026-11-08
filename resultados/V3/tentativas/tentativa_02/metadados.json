@@ -1,0 +1,44 @@
+{
+  "id_execucao": "I3-t02-5a84782b",
+  "incremento": "I3",
+  "versao_anterior": "V2",
+  "versao_resultante": "V3",
+  "tentativa": 2,
+  "tipo": "correcao",
+  "modelo": "gemini-3.5-flash-lite",
+  "parametros": {
+    "temperature": 0.0,
+    "top_p": null,
+    "top_k": null,
+    "nota_parametros": "top_p/top_k não fixados explicitamente: com temperature=0 a amostragem é determinística (greedy), tornando-os irrelevantes para o resultado; não estimados nem inventados."
+  },
+  "formato_resposta": "json (caminho+conteúdo completo) — não unified diff (ver docstring do script para o motivo da mudança)",
+  "data_hora_inicio": "2026-11-06T02:22:17.406217+00:00",
+  "commit_base": "768ac5f3a01c78163c84a0bd2efdaf8dce7dff81",
+  "data_hora_fim": "2026-11-06T02:22:20.177079+00:00",
+  "tempo_resposta_segundos": 2.781,
+  "sucesso_chamada": true,
+  "finish_reason": "STOP",
+  "tokens_entrada": 20592,
+  "tokens_saida": 481,
+  "tokens_total": 21073,
+  "erros": [],
+  "json_extraido": true,
+  "arquivos_na_resposta": [
+    {
+      "caminho": "src/main/java/com/tcc/iterativa/config/SecurityConfig.java",
+      "acao": "modificar"
+    }
+  ],
+  "alteracoes_aplicadas": true,
+  "arquivos_alterados": [
+    "Modificado\tsrc/main/java/com/tcc/iterativa/config/SecurityConfig.java",
+    "Criado\tsrc/main/java/com/tcc/iterativa/controller/AnimalController.java",
+    "Criado\tsrc/main/java/com/tcc/iterativa/model/Animal.java",
+    "Criado\tsrc/main/java/com/tcc/iterativa/repository/AnimalRepository.java",
+    "Criado\tsrc/main/java/com/tcc/iterativa/service/AnimalService.java",
+    "Criado\tsrc/main/resources/templates/animal/cadastro.html",
+    "Modificado\tsrc/main/resources/templates/home/admin.html",
+    "Criado\tsrc/test/java/com/tcc/iterativa/service/AnimalServiceI3Test.java"
+  ]
+}

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="pt"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PedidoDoacaoController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">geracao-iterativa</a> &gt; <a href="index.source.html" class="el_package">com.tcc.iterativa.controller</a> &gt; <span class="el_source">PedidoDoacaoController.java</span></div><h1>PedidoDoacaoController.java</h1><pre class="source lang-java linenums">package com.tcc.iterativa.controller;
+
+import com.tcc.iterativa.model.PedidoDoacao;
+import com.tcc.iterativa.service.EventoDoacaoRelatorioService;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDate;
+import java.util.Optional;
+
+@Controller
+public class PedidoDoacaoController {
+
+    private final EventoDoacaoRelatorioService service;
+
+<span class="fc" id="L22">    public PedidoDoacaoController(EventoDoacaoRelatorioService service) {</span>
+<span class="fc" id="L23">        this.service = service;</span>
+<span class="fc" id="L24">    }</span>
+
+    @GetMapping(&quot;/doacoes/pedidos&quot;)
+    public String listarPedidosPublico(Model model) {
+<span class="nc" id="L28">        model.addAttribute(&quot;pedidos&quot;, service.listarPedidosDoacaoPublicos());</span>
+<span class="nc" id="L29">        return &quot;doacao/pedidos-publico&quot;;</span>
+    }
+
+    @GetMapping(&quot;/doacoes/pedidos/{id}&quot;)
+    public String detalhePedido(@PathVariable Long id, Model model) {
+<span class="nc" id="L34">        Optional&lt;PedidoDoacao&gt; pedido = service.buscarPedidoDoacaoPorId(id);</span>
+<span class="nc bnc" id="L35" title="All 2 branches missed.">        if (pedido.isEmpty()) return &quot;redirect:/doacoes/pedidos&quot;;</span>
+<span class="nc" id="L36">        model.addAttribute(&quot;pedido&quot;, pedido.get());</span>
+<span class="nc" id="L37">        return &quot;doacao/detalhe-pedido&quot;;</span>
+    }
+
+    @GetMapping(&quot;/doacoes/gerenciar&quot;)
+    public String gerenciarPedidos(Authentication authentication, Model model) {
+<span class="nc bnc" id="L42" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc" id="L43">        model.addAttribute(&quot;pedidos&quot;, service.listarPedidosDoacaoPublicos());</span>
+<span class="nc" id="L44">        return &quot;doacao/gerenciar&quot;;</span>
+    }
+
+    @PostMapping(&quot;/doacoes/gerenciar/salvar&quot;)
+    public String salvarPedido(
+            Authentication authentication,
+            @RequestParam(required = false) Long id,
+            @RequestParam String titulo,
+            @RequestParam Double valorSugerido,
+            @RequestParam String descricao,
+            @RequestParam LocalDate dataValidade,
+            @RequestParam(required = false) MultipartFile[] fotosFiles,
+            Model model) {
+<span class="nc bnc" id="L57" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+        try {
+<span class="nc bnc" id="L59" title="All 2 branches missed.">            if (id == null) {</span>
+<span class="nc" id="L60">                service.salvarPedidoDoacao(titulo, valorSugerido, descricao, dataValidade, fotosFiles);</span>
+<span class="nc" id="L61">                model.addAttribute(&quot;sucesso&quot;, &quot;Pedido de doação criado com sucesso! [PRT-48/49]&quot;);</span>
+            } else {
+<span class="nc" id="L63">                service.atualizarPedidoDoacao(id, titulo, valorSugerido, descricao, dataValidade, fotosFiles);</span>
+<span class="nc" id="L64">                model.addAttribute(&quot;sucesso&quot;, &quot;Pedido de doação atualizado com sucesso!&quot;);</span>
+            }
+<span class="nc" id="L66">        } catch (Exception e) {</span>
+<span class="nc" id="L67">            model.addAttribute(&quot;erro&quot;, e.getMessage());</span>
+<span class="nc" id="L68">        }</span>
+<span class="nc" id="L69">        model.addAttribute(&quot;pedidos&quot;, service.listarPedidosDoacaoPublicos());</span>
+<span class="nc" id="L70">        return &quot;doacao/gerenciar&quot;;</span>
+    }
+
+    @PostMapping(&quot;/doacoes/gerenciar/deletar&quot;)
+    public String deletarPedido(Authentication authentication, @RequestParam Long id) {
+<span class="nc bnc" id="L75" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc" id="L76">        service.deletarPedidoDoacao(id);</span>
+<span class="nc" id="L77">        return &quot;redirect:/doacoes/gerenciar&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

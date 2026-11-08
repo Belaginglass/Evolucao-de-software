@@ -1,0 +1,31 @@
+V5 = I5 (Gerenciamento de privilégios dos atores, UC004/RF006). 4 chamadas à API.
+
+- Tentativa 1: aplicou de primeira, mas 2 testes JUnit falharam (CPF duplicado
+  hardcoded dentro do próprio teste — bug no teste, não na aplicação).
+- Tentativa 2 (correção): CPFs distintos nos testes. 17/17 passaram.
+- Teste manual: REGRESSÃO GRAVE — o modelo substituiu o papel simplificado
+  "ADMIN" por "DIRETOR_GERAL"/"GESTOR_ADOCAO" (como instruído), mas esqueceu de
+  atualizar o formulário público de cadastro, que ainda só oferecia
+  "ADOTANTE"/"ADMIN". Resultado: ninguém conseguia mais acessar as
+  funcionalidades administrativas de I3 (cadastro de animal) e I4 (página
+  inicial) com um cadastro novo, e UC004 (este próprio incremento) ficava
+  inalcançável — não havia como criar um DIRETOR_GERAL.
+- Tentativa 3 (correção): formulário atualizado com as opções corretas.
+- Teste manual: VULNERABILIDADE CRÍTICA DE SEGURANÇA — POST /usuarios/privilegios
+  e POST /usuarios/excluir não tinham NENHUMA restrição de papel (só exigiam
+  estar autenticado). Confirmado escalonamento de privilégio real: um usuário
+  ADOTANTE conseguiu se autopromover a DIRETOR_GERAL enviando uma única
+  requisição HTTP direta, sem passar por nenhuma validação de autorização.
+- Tentativa 4 (correção): restringiu as duas rotas a hasRole('DIRETOR_GERAL') no
+  SecurityConfig, e pediu defesa em profundidade (checagem também no
+  controller). Confirmado por novo teste manual: a tentativa de autopromoção
+  agora retorna 403; o fluxo legítimo (DIRETOR_GERAL promove um ADOTANTE a
+  GESTOR_ADOCAO, filtra por cargo, revoga acesso) funciona corretamente.
+
+REGRESSÃO (I1-I4, re-testada após a correção final): login, busca de CEP e
+cadastro de animal por GESTOR_ADOCAO continuam funcionando.
+
+RESULTADOS: CT021, CT022, CT023 — todos Aprovados (após as correções).
+Taxa de aprovação (TA) de V5: 3/3 = 100% (mas só depois de corrigir uma falha de
+segurança real que, se não verificada manualmente, teria passado para a versão
+"aprovada" do sistema sem nenhum teste JUnit do próprio Gemini detectando-a).

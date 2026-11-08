@@ -1,0 +1,28 @@
+{
+  "id_execucao": "I1-t02-6821695e",
+  "incremento": "I1",
+  "versao_anterior": "V0",
+  "versao_resultante": "V1",
+  "tentativa": 2,
+  "modelo": "gemini-3.5-flash-lite",
+  "parametros": {
+    "temperature": 0.0,
+    "top_p": null,
+    "top_k": null,
+    "nota_parametros": "top_p/top_k não fixados explicitamente: com temperature=0 a amostragem é determinística (greedy), tornando-os irrelevantes para o resultado; não estimados nem inventados."
+  },
+  "data_hora_inicio": "2026-11-06T01:25:05.556908+00:00",
+  "commit_base": "b4362f835fe9b0ff153148890dcc99ab932afa3f",
+  "data_hora_fim": "2026-11-06T01:25:23.408666+00:00",
+  "tempo_resposta_segundos": 17.844,
+  "sucesso_chamada": true,
+  "finish_reason": "STOP",
+  "tokens_entrada": 8776,
+  "tokens_saida": 7964,
+  "tokens_total": 16740,
+  "erros": [
+    "git apply --check falhou: error: corrupt patch at line 239"
+  ],
+  "patch_extraido": true,
+  "patch_aplicado": false
+}

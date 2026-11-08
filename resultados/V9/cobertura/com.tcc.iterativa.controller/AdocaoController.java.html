@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="pt"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdocaoController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">geracao-iterativa</a> &gt; <a href="index.source.html" class="el_package">com.tcc.iterativa.controller</a> &gt; <span class="el_source">AdocaoController.java</span></div><h1>AdocaoController.java</h1><pre class="source lang-java linenums">package com.tcc.iterativa.controller;
+
+import com.tcc.iterativa.model.Adocao;
+import com.tcc.iterativa.model.Animal;
+import com.tcc.iterativa.service.AdocaoService;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDate;
+import java.util.Base64;
+import java.util.Optional;
+
+@Controller
+public class AdocaoController {
+
+    private final AdocaoService adocaoService;
+
+<span class="fc" id="L24">    public AdocaoController(AdocaoService adocaoService) {</span>
+<span class="fc" id="L25">        this.adocaoService = adocaoService;</span>
+<span class="fc" id="L26">    }</span>
+
+    @GetMapping(&quot;/adote-aqui&quot;)
+    public String listarAnimaisAdocao(Model model, Authentication authentication) {
+<span class="nc" id="L30">        model.addAttribute(&quot;animais&quot;, adocaoService.listarAnimaisDisponiveisParaAdocao());</span>
+<span class="nc bnc" id="L31" title="All 2 branches missed.">        model.addAttribute(&quot;autenticado&quot;, authentication != null);</span>
+<span class="nc" id="L32">        return &quot;adocao/lista-animais&quot;;</span>
+    }
+
+    @GetMapping(&quot;/animais/perfil/{id}&quot;)
+    public String verPerfilAnimal(@PathVariable Long id, Model model, Authentication authentication) {
+<span class="nc" id="L37">        Optional&lt;Animal&gt; animal = adocaoService.buscarAnimalPorId(id);</span>
+<span class="nc bnc" id="L38" title="All 2 branches missed.">        if (animal.isEmpty()) {</span>
+<span class="nc" id="L39">            return &quot;redirect:/adote-aqui&quot;;</span>
+        }
+<span class="nc" id="L41">        model.addAttribute(&quot;animal&quot;, animal.get());</span>
+<span class="nc bnc" id="L42" title="All 2 branches missed.">        model.addAttribute(&quot;autenticado&quot;, authentication != null);</span>
+<span class="nc" id="L43">        return &quot;adocao/perfil-animal&quot;;</span>
+    }
+
+    @GetMapping(&quot;/adocoes/termo/{animalId}&quot;)
+    public String termoAdocaoForm(@PathVariable Long animalId, Authentication authentication, Model model) {
+<span class="nc bnc" id="L48" title="All 2 branches missed.">        if (authentication == null) {</span>
+<span class="nc" id="L49">            return &quot;redirect:/login?redirect=/adocoes/termo/&quot; + animalId;</span>
+        }
+<span class="nc" id="L51">        Optional&lt;Animal&gt; animal = adocaoService.buscarAnimalPorId(animalId);</span>
+<span class="nc bnc" id="L52" title="All 2 branches missed.">        if (animal.isEmpty()) {</span>
+<span class="nc" id="L53">            return &quot;redirect:/adote-aqui&quot;;</span>
+        }
+<span class="nc" id="L55">        model.addAttribute(&quot;animal&quot;, animal.get());</span>
+<span class="nc" id="L56">        return &quot;adocao/termo&quot;;</span>
+    }
+
+    @PostMapping(&quot;/adocoes/solicitar&quot;)
+    public String solicitarAdocao(
+            @RequestParam Long animalId,
+            @RequestParam(required = false) String termoAceito,
+            Authentication authentication,
+            Model model) {
+<span class="nc bnc" id="L65" title="All 2 branches missed.">        if (authentication == null) {</span>
+<span class="nc" id="L66">            return &quot;redirect:/login&quot;;</span>
+        }
+        try {
+<span class="nc bnc" id="L69" title="All 4 branches missed.">            boolean aceito = &quot;on&quot;.equals(termoAceito) || &quot;true&quot;.equals(termoAceito);</span>
+<span class="nc" id="L70">            adocaoService.criarPedidoAdocao(animalId, authentication.getName(), aceito);</span>
+<span class="nc" id="L71">            return &quot;redirect:/adocoes/minhas&quot;;</span>
+<span class="nc" id="L72">        } catch (Exception e) {</span>
+<span class="nc" id="L73">            model.addAttribute(&quot;erro&quot;, e.getMessage());</span>
+<span class="nc" id="L74">            Optional&lt;Animal&gt; animal = adocaoService.buscarAnimalPorId(animalId);</span>
+<span class="nc" id="L75">            animal.ifPresent(a -&gt; model.addAttribute(&quot;animal&quot;, a));</span>
+<span class="nc" id="L76">            return &quot;adocao/termo&quot;;</span>
+        }
+    }
+
+    @GetMapping(&quot;/adocoes/minhas&quot;)
+    public String minhasAdocoes(Authentication authentication, Model model) {
+<span class="nc bnc" id="L82" title="All 2 branches missed.">        if (authentication == null) {</span>
+<span class="nc" id="L83">            return &quot;redirect:/login&quot;;</span>
+        }
+<span class="nc" id="L85">        model.addAttribute(&quot;adocoes&quot;, adocaoService.listarAdocoesAdotante(authentication.getName()));</span>
+<span class="nc" id="L86">        return &quot;adocao/minhas-adocoes&quot;;</span>
+    }
+
+    @GetMapping(&quot;/adocoes/fila&quot;)
+    public String filaAdocoes(Authentication authentication, Model model) {
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc" id="L92">        model.addAttribute(&quot;adocoes&quot;, adocaoService.listarFilaAdocao(authentication.getName()));</span>
+<span class="nc" id="L93">        return &quot;adocao/fila&quot;;</span>
+    }
+
+    @PostMapping(&quot;/adocoes/aprovar&quot;)
+    public String aprovarAdocao(
+            @RequestParam Long adocaoId,
+            @RequestParam String disponibilidade,
+            Authentication authentication,
+            Model model) {
+<span class="nc bnc" id="L102" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+        try {
+<span class="nc" id="L104">            adocaoService.aprovarAdocao(adocaoId, authentication.getName(), disponibilidade);</span>
+<span class="nc" id="L105">            model.addAttribute(&quot;sucesso&quot;, &quot;Pedido de adoção aprovado com sucesso! E-mail enviado informando dias de disponibilidade [RN015].&quot;);</span>
+<span class="nc" id="L106">        } catch (Exception e) {</span>
+<span class="nc" id="L107">            model.addAttribute(&quot;erro&quot;, e.getMessage());</span>
+<span class="nc" id="L108">        }</span>
+<span class="nc" id="L109">        model.addAttribute(&quot;adocoes&quot;, adocaoService.listarFilaAdocao(authentication.getName()));</span>
+<span class="nc" id="L110">        return &quot;adocao/fila&quot;;</span>
+    }
+
+    @PostMapping(&quot;/adocoes/marcar-adotado&quot;)
+    public String marcarComoAdotado(
+            @RequestParam Long adocaoId,
+            Authentication authentication,
+            Model model) {
+<span class="nc bnc" id="L118" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc" id="L119">        adocaoService.marcarComoAdotado(adocaoId);</span>
+<span class="nc" id="L120">        return &quot;redirect:/adocoes/pos-adocao/gestor&quot;;</span>
+    }
+
+    @PostMapping(&quot;/adocoes/reprovar&quot;)
+    public String reprovarAdocao(
+            @RequestParam Long adocaoId,
+            Authentication authentication,
+            Model model) {
+<span class="nc bnc" id="L128" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+        try {
+<span class="nc" id="L130">            adocaoService.reprovarAdocao(adocaoId);</span>
+<span class="nc" id="L131">            model.addAttribute(&quot;sucesso&quot;, &quot;Pedido de adoção reprovado com sucesso! E-mail enviado [RN015].&quot;);</span>
+<span class="nc" id="L132">        } catch (Exception e) {</span>
+<span class="nc" id="L133">            model.addAttribute(&quot;erro&quot;, e.getMessage());</span>
+<span class="nc" id="L134">        }</span>
+<span class="nc" id="L135">        model.addAttribute(&quot;adocoes&quot;, adocaoService.listarFilaAdocao(authentication.getName()));</span>
+<span class="nc" id="L136">        return &quot;adocao/fila&quot;;</span>
+    }
+
+    @PostMapping(&quot;/adocoes/reprovar-todos&quot;)
+    public String reprovarTodosDemais(
+            @RequestParam Long animalId,
+            @RequestParam Long adocaoExcecaoId,
+            Authentication authentication,
+            Model model) {
+<span class="nc bnc" id="L145" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+        try {
+<span class="nc" id="L147">            adocaoService.reprovarTodosDemais(animalId, adocaoExcecaoId);</span>
+<span class="nc" id="L148">            model.addAttribute(&quot;sucesso&quot;, &quot;Demais pedidos reprovados com sucesso!&quot;);</span>
+<span class="nc" id="L149">        } catch (Exception e) {</span>
+<span class="nc" id="L150">            model.addAttribute(&quot;erro&quot;, e.getMessage());</span>
+<span class="nc" id="L151">        }</span>
+<span class="nc" id="L152">        model.addAttribute(&quot;adocoes&quot;, adocaoService.listarFilaAdocao(authentication.getName()));</span>
+<span class="nc" id="L153">        return &quot;adocao/fila&quot;;</span>
+    }
+
+    @GetMapping(&quot;/adocoes/manual&quot;)
+    public String cadastroManualAdocaoForm(Authentication authentication, Model model) {
+<span class="nc bnc" id="L158" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc" id="L159">        model.addAttribute(&quot;animais&quot;, adocaoService.listarAnimaisDisponiveisParaAdocao());</span>
+<span class="nc" id="L160">        return &quot;adocao/cadastro-manual&quot;;</span>
+    }
+
+    @PostMapping(&quot;/adocoes/manual&quot;)
+    public String cadastroManualAdocao(
+            Authentication authentication,
+            @RequestParam Long animalId,
+            @RequestParam String email,
+            @RequestParam String nome,
+            @RequestParam String cpf,
+            @RequestParam LocalDate dataNascimento,
+            @RequestParam String telefones,
+            @RequestParam String rua,
+            @RequestParam String numero,
+            @RequestParam(required = false) String complemento,
+            @RequestParam String bairro,
+            @RequestParam String cidade,
+            @RequestParam String estado,
+            @RequestParam String cep,
+            @RequestParam(required = false) MultipartFile fotoFile,
+            @RequestParam String voluntario,
+            Model model) {
+<span class="nc bnc" id="L182" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+        try {
+<span class="nc bnc" id="L184" title="All 2 branches missed.">            byte[] fotoBytes = fotoFile != null ? fotoFile.getBytes() : null;</span>
+<span class="nc" id="L185">            adocaoService.cadastrarManualEClincharAdocao(animalId, email, nome, cpf, dataNascimento, telefones, rua, numero, complemento, bairro, cidade, estado, cep, fotoBytes, voluntario);</span>
+<span class="nc" id="L186">            model.addAttribute(</span>
+                &quot;sucesso&quot;,
+                &quot;Adoção manual cadastrada com sucesso! Senha gerada automaticamente (data de nascimento DD-MM-AAAA) conforme RN014.&quot;
+            );
+<span class="nc" id="L190">        } catch (Exception e) {</span>
+<span class="nc" id="L191">            model.addAttribute(&quot;erro&quot;, e.getMessage());</span>
+<span class="nc" id="L192">        }</span>
+<span class="nc" id="L193">        model.addAttribute(&quot;animais&quot;, adocaoService.listarAnimaisDisponiveisParaAdocao());</span>
+<span class="nc" id="L194">        return &quot;adocao/cadastro-manual&quot;;</span>
+    }
+
+    @GetMapping(&quot;/adocoes/pos-adocao/gestor&quot;)
+    public String posAdocaoGestor(Authentication authentication, Model model) {
+<span class="nc bnc" id="L199" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc" id="L200">        model.addAttribute(&quot;adocoes&quot;, adocaoService.listarAdocoesParaPosAdocao());</span>
+<span class="nc" id="L201">        model.addAttribute(&quot;relatosPendentes&quot;, adocaoService.listarRelatosPendentes());</span>
+<span class="nc" id="L202">        return &quot;adocao/pos-adocao-gestor&quot;;</span>
+    }
+
+    @PostMapping(&quot;/adocoes/pos-adocao/pedir-feedback&quot;)
+    public String pedirFeedback(@RequestParam Long adocaoId, @RequestParam String mensagem) {
+<span class="nc" id="L207">        adocaoService.pedirFeedback(adocaoId, mensagem);</span>
+<span class="nc" id="L208">        return &quot;redirect:/adocoes/pos-adocao/gestor&quot;;</span>
+    }
+
+    @PostMapping(&quot;/adocoes/pos-adocao/enviar-feedback-adotante&quot;)
+    public String enviarFeedbackAdotante(
+            @RequestParam Long adocaoId,
+            @RequestParam String resposta,
+            @RequestParam(required = false) MultipartFile fotoRelato,
+            Authentication authentication) throws Exception {
+<span class="nc bnc" id="L217" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc bnc" id="L218" title="All 4 branches missed.">        String fotoBase64 = (fotoRelato != null &amp;&amp; !fotoRelato.isEmpty()) ? Base64.getEncoder().encodeToString(fotoRelato.getBytes()) : null;</span>
+<span class="nc" id="L219">        adocaoService.enviarFeedbackAdotante(adocaoId, resposta, fotoBase64);</span>
+<span class="nc" id="L220">        return &quot;redirect:/adocoes/minhas&quot;;</span>
+    }
+
+    @PostMapping(&quot;/adocoes/pos-adocao/avaliar-gestor&quot;)
+    public String avaliarGestor(
+            @RequestParam Long adocaoId,
+            @RequestParam int estrelas,
+            @RequestParam(required = false) String necessitaAcompanhamento,
+            @RequestParam(required = false) String revogar,
+            @RequestParam String respostaGestor,
+            @RequestParam(required = false) String novoEstado) {
+<span class="nc bnc" id="L231" title="All 4 branches missed.">        boolean precisa = &quot;on&quot;.equals(necessitaAcompanhamento) || &quot;true&quot;.equals(necessitaAcompanhamento);</span>
+<span class="nc bnc" id="L232" title="All 4 branches missed.">        boolean rev = &quot;on&quot;.equals(revogar) || &quot;true&quot;.equals(revogar);</span>
+<span class="nc" id="L233">        adocaoService.avaliarFeedbackGestor(adocaoId, estrelas, precisa, rev, respostaGestor, novoEstado);</span>
+<span class="nc" id="L234">        return &quot;redirect:/adocoes/pos-adocao/gestor&quot;;</span>
+    }
+
+    @PostMapping(&quot;/adocoes/pos-adocao/enviar-relato&quot;)
+    public String enviarRelato(
+            @RequestParam Long adocaoId,
+            @RequestParam String relato,
+            @RequestParam(required = false) MultipartFile fotoRelato,
+            Authentication authentication) throws Exception {
+<span class="nc bnc" id="L243" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc bnc" id="L244" title="All 4 branches missed.">        String fotoBase64 = (fotoRelato != null &amp;&amp; !fotoRelato.isEmpty()) ? Base64.getEncoder().encodeToString(fotoRelato.getBytes()) : null;</span>
+<span class="nc" id="L245">        adocaoService.enviarRelatoAdotante(adocaoId, relato, fotoBase64);</span>
+<span class="nc" id="L246">        return &quot;redirect:/adocoes/minhas&quot;;</span>
+    }
+
+    @PostMapping(&quot;/adocoes/pos-adocao/aprovar-relato&quot;)
+    public String aprovarRelato(
+            @RequestParam Long adocaoId,
+            @RequestParam boolean aprovar,
+            @RequestParam(required = false) String motivoRemocao) {
+<span class="nc" id="L254">        adocaoService.aprovarRelato(adocaoId, aprovar, motivoRemocao);</span>
+<span class="nc" id="L255">        return &quot;redirect:/adocoes/pos-adocao/gestor&quot;;</span>
+    }
+
+    @GetMapping(&quot;/adotados&quot;)
+    public String paginaAdotadosPublica(Model model) {
+<span class="nc" id="L260">        model.addAttribute(&quot;relatos&quot;, adocaoService.listarRelatosAprovadosPublicos());</span>
+<span class="nc" id="L261">        return &quot;adocao/adotados-publicos&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

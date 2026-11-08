@@ -1,0 +1,7 @@
+Modificado	src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+Modificado	src/main/java/com/tcc/iterativa/controller/AdocaoController.java
+Modificado	src/main/java/com/tcc/iterativa/model/Usuario.java
+Modificado	src/main/java/com/tcc/iterativa/service/AdocaoService.java
+Criado	src/main/resources/templates/adocao/cadastro-manual.html
+Modificado	src/main/resources/templates/adocao/fila.html
+Criado	src/test/java/com/tcc/iterativa/service/AdocaoServiceI7Test.java

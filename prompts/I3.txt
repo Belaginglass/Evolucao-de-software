@@ -1,0 +1,40 @@
+INCREMENTO I3 — Cadastro e gerenciamento de animais
+
+Implemente o caso de uso UC003 (Cadastro de Animal), descrito em detalhe no bloco
+"REQUISITOS DO INCREMENTO I3" desta mesma solicitação, e nenhuma outra
+funcionalidade. Não implemente pesquisa pública de animais, adoção, apadrinhamento
+ou qualquer outra coisa — isso é de incrementos futuros.
+
+O projeto já tem (de I1/I2): Usuario, UsuarioService, UsuarioRepository,
+AuthController, UsuarioController, PasswordUtils, SecurityConfig (com rotas
+públicas: /, /login, /cadastro, /recuperar-senha, /atualizar-senha, /buscar-cep,
+/h2-console/**). Use o papel "ADMIN" de Usuario para restringir o acesso ao
+cadastro de animal a usuários administrativos (Gestor de Adoção/Diretor Geral) —
+não crie um novo sistema de papéis/permissões (isso é do Incremento I5).
+
+Restrições de ambiente importantes (evite os bugs já encontrados em I1/I2, que
+têm a mesma causa raiz em qualquer entidade nova):
+- NÃO use @Lob nem tipos BLOB para armazenar fotos — o driver sqlite-jdbc usado
+  neste projeto não implementa ResultSet.getBlob(). Armazene fotos como String
+  (Base64) em coluna TEXT comum, exatamente como foi feito em Usuario.foto.
+- Ao adicionar rotas novas que precisem ser acessadas sem estar logado (nenhuma
+  neste incremento, mas se precisar), lembre-se de adicioná-las ao permitAll do
+  SecurityConfig — rotas administrativas devem continuar exigindo autenticação.
+- Ao criar uma nova entidade com um campo que precise ser único (ex.: não há
+  nenhum campo obviamente único em Animal pelo RN003, mas se adicionar algum),
+  tenha em mente que o esquema do banco é recriado do zero a cada avaliação deste
+  experimento — não é necessário se preocupar com migração de dados existentes.
+
+Campos do cadastro de animal (RN003 — ver o texto completo no bloco de
+requisitos): espécie, sexo, castrado, vermifugado, idade aproximada, raça,
+temperamento (múltiplos valores possíveis), porte, fotos, nome de referência,
+história, patrimônio tombado, em tratamento, disponível para adoção, vacinas
+(nome + quantidade de doses + data de cada dose), baia, outras informações, autor
+da fotografia, contato do autor. Implemente as regras de marcação automática
+(tombado → disponível=não; em tratamento → disponível=não) e os campos opcionais
+exatamente como especificado (temperamento, idade aproximada, baia, porte, fotos
+e contato do autor são os únicos opcionais — todo o resto é obrigatório).
+
+Lembre-se (Apêndice C): RNF004 exige que a lista de raças exibida mude conforme
+a espécie escolhida (canina/felina) — pode ser uma lista fixa simples no backend,
+não precisa vir de uma API externa de raças.

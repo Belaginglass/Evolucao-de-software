@@ -1,0 +1,36 @@
+INCREMENTO I5 — Gerenciamento de privilégios dos atores
+
+Implemente o caso de uso UC004 (Manter Privilégio dos Atores), descrito em
+detalhe no bloco "REQUISITOS DO INCREMENTO I5" desta mesma solicitação, e
+nenhuma outra funcionalidade.
+
+Contexto importante: até agora (I1-I4), o sistema usa apenas dois papéis
+simplificados, "ADMIN" e "ADOTANTE" (campo `papel` em `Usuario`), como uma
+aproximação temporária. Este é o incremento que implementa de fato o requisito
+de privilégios (RF006): o Diretor Geral precisa conseguir listar os usuários
+administrativos existentes, buscar/filtrar por nome ou cargo, e
+habilitar/desabilitar temporariamente ou excluir permanentemente o acesso
+administrativo de cada um.
+
+Decisão de design: pode continuar usando o campo `papel` em `Usuario` como a
+fonte da verdade (ex.: valores "DIRETOR_GERAL", "GESTOR_ADOCAO", "ADOTANTE"), ou
+introduzir um campo adicional de status administrativo (ex.: `statusAdmin`:
+ATIVO/DESABILITADO), desde que o resultado cumpra o requisito: o Diretor Geral
+consegue ver a lista de todos os usuários com privilégio administrativo e alterar
+esse privilégio. NÃO crie uma tabela de permissões granulares nova — mantenha
+simples, usando o que já existe em `Usuario`.
+
+Apenas o papel "DIRETOR_GERAL" (ou equivalente — o que hoje é "ADMIN" com o
+privilégio mais alto) pode acessar esta funcionalidade; um Gestor de Adoção não
+deve conseguir alterar privilégios de outros usuários. Se for necessário
+distinguir "Diretor Geral" de "Gestor de Adoção" a partir de agora, pode
+introduzir esses dois papéis específicos substituindo o "ADMIN" genérico usado
+nos incrementos anteriores — ajuste os dados/testes de I1-I4 cujo papel era
+"ADMIN" apenas se for estritamente necessário para este incremento funcionar,
+preservando o comportamento já testado (login, cadastro, página inicial,
+cadastro de animal continuam exigindo "ter privilégio administrativo", agora com
+nomes de papel mais específicos).
+
+Lembre-se das lições dos incrementos anteriores: restrinja o acesso a esta
+funcionalidade via SecurityConfig (hasRole, não apenas checagem de
+authentication != null no controller); não use @Lob/BLOB para nada.

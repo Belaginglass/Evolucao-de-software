@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="pt"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HomeController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">geracao-iterativa</a> &gt; <a href="index.source.html" class="el_package">com.tcc.iterativa.controller</a> &gt; <span class="el_source">HomeController.java</span></div><h1>HomeController.java</h1><pre class="source lang-java linenums">package com.tcc.iterativa.controller;
+
+import com.tcc.iterativa.service.ConteudoHomeService;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+@Controller
+public class HomeController {
+
+    private final ConteudoHomeService conteudoHomeService;
+
+<span class="fc" id="L16">    public HomeController(ConteudoHomeService conteudoHomeService) {</span>
+<span class="fc" id="L17">        this.conteudoHomeService = conteudoHomeService;</span>
+<span class="fc" id="L18">    }</span>
+
+    @GetMapping(&quot;/&quot;)
+    public String index(Model model) {
+<span class="nc" id="L22">        model.addAttribute(&quot;sobreNos&quot;, conteudoHomeService.obterSobreNos());</span>
+<span class="nc" id="L23">        model.addAttribute(&quot;servicos&quot;, conteudoHomeService.selecionarAleatorio(conteudoHomeService.listarServicos(), 3));</span>
+<span class="nc" id="L24">        model.addAttribute(&quot;campanhas&quot;, conteudoHomeService.selecionarAleatorio(conteudoHomeService.listarCampanhas(), 3));</span>
+<span class="nc" id="L25">        model.addAttribute(&quot;doacoes&quot;, conteudoHomeService.selecionarAleatorio(conteudoHomeService.listarDoacoes(), 3));</span>
+<span class="nc" id="L26">        return &quot;index&quot;;</span>
+    }
+
+    @GetMapping(&quot;/home/sobre-nos&quot;)
+    public String editarSobreNosForm(Authentication authentication, Model model) {
+<span class="nc bnc" id="L31" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc" id="L32">        model.addAttribute(&quot;texto&quot;, conteudoHomeService.obterSobreNos());</span>
+<span class="nc" id="L33">        return &quot;home/editar-sobre&quot;;</span>
+    }
+
+    @PostMapping(&quot;/home/sobre-nos&quot;)
+    public String salvarSobreNos(Authentication authentication, @RequestParam String texto, Model model) {
+<span class="nc bnc" id="L38" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc" id="L39">        conteudoHomeService.salvarSobreNos(texto);</span>
+<span class="nc" id="L40">        model.addAttribute(&quot;sucesso&quot;, &quot;Texto 'sobre nós' atualizado com sucesso! [PRT-31]&quot;);</span>
+<span class="nc" id="L41">        model.addAttribute(&quot;texto&quot;, texto);</span>
+<span class="nc" id="L42">        return &quot;home/editar-sobre&quot;;</span>
+    }
+
+    @GetMapping(&quot;/home/servicos&quot;)
+    public String gerenciarServicos(Authentication authentication, Model model) {
+<span class="nc bnc" id="L47" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc" id="L48">        model.addAttribute(&quot;servicos&quot;, conteudoHomeService.listarServicos());</span>
+<span class="nc" id="L49">        return &quot;home/editar-servicos&quot;;</span>
+    }
+
+    @PostMapping(&quot;/home/servicos&quot;)
+    public String adicionarServico(Authentication authentication, @RequestParam String titulo, @RequestParam String descricao, Model model) {
+<span class="nc bnc" id="L54" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+        try {
+<span class="nc" id="L56">            conteudoHomeService.salvarItem(&quot;SERVICO&quot;, titulo, descricao, null);</span>
+<span class="nc" id="L57">            model.addAttribute(&quot;sucesso&quot;, &quot;Serviço adicionado com sucesso! [PRT-32]&quot;);</span>
+<span class="nc" id="L58">        } catch (Exception e) {</span>
+<span class="nc" id="L59">            model.addAttribute(&quot;erro&quot;, e.getMessage());</span>
+<span class="nc" id="L60">        }</span>
+<span class="nc" id="L61">        model.addAttribute(&quot;servicos&quot;, conteudoHomeService.listarServicos());</span>
+<span class="nc" id="L62">        return &quot;home/editar-servicos&quot;;</span>
+    }
+
+    @PostMapping(&quot;/home/servicos/deletar&quot;)
+    public String deletarServico(Authentication authentication, @RequestParam Long id) {
+<span class="nc bnc" id="L67" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc" id="L68">        conteudoHomeService.deletarItem(id);</span>
+<span class="nc" id="L69">        return &quot;redirect:/home/servicos&quot;;</span>
+    }
+
+    @GetMapping(&quot;/home/campanhas&quot;)
+    public String gerenciarCampanhas(Authentication authentication, Model model) {
+<span class="nc bnc" id="L74" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc" id="L75">        model.addAttribute(&quot;campanhas&quot;, conteudoHomeService.listarCampanhas());</span>
+<span class="nc" id="L76">        return &quot;home/editar-campanhas&quot;;</span>
+    }
+
+    @PostMapping(&quot;/home/campanhas&quot;)
+    public String adicionarCampanha(Authentication authentication, @RequestParam String titulo, @RequestParam String descricao, Model model) {
+<span class="nc bnc" id="L81" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+        try {
+<span class="nc" id="L83">            conteudoHomeService.salvarItem(&quot;CAMPANHA&quot;, titulo, descricao, null);</span>
+<span class="nc" id="L84">            model.addAttribute(&quot;sucesso&quot;, &quot;Campanha adicionada com sucesso! [PRT-33]&quot;);</span>
+<span class="nc" id="L85">        } catch (Exception e) {</span>
+<span class="nc" id="L86">            model.addAttribute(&quot;erro&quot;, e.getMessage());</span>
+<span class="nc" id="L87">        }</span>
+<span class="nc" id="L88">        model.addAttribute(&quot;campanhas&quot;, conteudoHomeService.listarCampanhas());</span>
+<span class="nc" id="L89">        return &quot;home/editar-campanhas&quot;;</span>
+    }
+
+    @PostMapping(&quot;/home/campanhas/deletar&quot;)
+    public String deletarCampanha(Authentication authentication, @RequestParam Long id) {
+<span class="nc bnc" id="L94" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc" id="L95">        conteudoHomeService.deletarItem(id);</span>
+<span class="nc" id="L96">        return &quot;redirect:/home/campanhas&quot;;</span>
+    }
+
+    @GetMapping(&quot;/home/doacoes&quot;)
+    public String gerenciarDoacoes(Authentication authentication, Model model) {
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc" id="L102">        model.addAttribute(&quot;doacoes&quot;, conteudoHomeService.listarDoacoes());</span>
+<span class="nc" id="L103">        return &quot;home/editar-doacoes&quot;;</span>
+    }
+
+    @PostMapping(&quot;/home/doacoes&quot;)
+    public String adicionarDoacao(Authentication authentication, @RequestParam String titulo, @RequestParam String valor, Model model) {
+<span class="nc bnc" id="L108" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+        try {
+<span class="nc" id="L110">            conteudoHomeService.salvarItem(&quot;DOACAO&quot;, titulo, null, valor);</span>
+<span class="nc" id="L111">            model.addAttribute(&quot;sucesso&quot;, &quot;Valor de doação adicionado com sucesso! [PRT-34]&quot;);</span>
+<span class="nc" id="L112">        } catch (Exception e) {</span>
+<span class="nc" id="L113">            model.addAttribute(&quot;erro&quot;, e.getMessage());</span>
+<span class="nc" id="L114">        }</span>
+<span class="nc" id="L115">        model.addAttribute(&quot;doacoes&quot;, conteudoHomeService.listarDoacoes());</span>
+<span class="nc" id="L116">        return &quot;home/editar-doacoes&quot;;</span>
+    }
+
+    @PostMapping(&quot;/home/doacoes/deletar&quot;)
+    public String deletarDoacao(Authentication authentication, @RequestParam Long id) {
+<span class="nc bnc" id="L121" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc" id="L122">        conteudoHomeService.deletarItem(id);</span>
+<span class="nc" id="L123">        return &quot;redirect:/home/doacoes&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

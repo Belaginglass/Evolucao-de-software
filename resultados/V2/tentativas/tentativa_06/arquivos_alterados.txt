@@ -1,0 +1,12 @@
+Criado	src/main/java/com/tcc/iterativa/config/CepUtils.java
+Modificado	src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+Modificado	src/main/java/com/tcc/iterativa/controller/AuthController.java
+Criado	src/main/java/com/tcc/iterativa/controller/UsuarioController.java
+Modificado	src/main/java/com/tcc/iterativa/model/Usuario.java
+Modificado	src/main/java/com/tcc/iterativa/service/UsuarioService.java
+Criado	src/main/resources/templates/auth/cadastro.html
+Modificado	src/main/resources/templates/auth/login.html
+Criado	src/main/resources/templates/auth/meus-dados.html
+Modificado	src/main/resources/templates/home/admin.html
+Modificado	src/main/resources/templates/home/adotante.html
+Criado	src/test/java/com/tcc/iterativa/service/UsuarioServiceI2Test.java

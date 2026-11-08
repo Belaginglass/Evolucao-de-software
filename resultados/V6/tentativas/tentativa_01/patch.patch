@@ -1,0 +1,641 @@
+diff --git a/src/main/java/com/tcc/iterativa/config/SecurityConfig.java b/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+index d13a766..5fa3ed0 100644
+--- a/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
++++ b/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+@@ -15,8 +15,8 @@ public class SecurityConfig {
+         http
+             .csrf(csrf -> csrf.disable())
+             .authorizeHttpRequests(auth -> auth
+-                .requestMatchers("/", "/login", "/cadastro", "/recuperar-senha", "/atualizar-senha", "/buscar-cep", "/h2-console/**").permitAll()
+-                .requestMatchers("/usuarios/gerenciar", "/usuarios/privilegios", "/usuarios/excluir").hasRole("DIRETOR_GERAL")
++                .requestMatchers("/", "/login", "/cadastro", "/recuperar-senha", "/atualizar-senha", "/buscar-cep", "/h2-console/**", "/adote-aqui", "/animais/perfil/**").permitAll()
++                .requestMatchers("/usuarios/gerenciar", "/usuarios/privilegios", "/usuarios/excluir", "/adocoes/fila").hasAnyRole("DIRETOR_GERAL", "GESTOR_ADOCAO")
+                 .requestMatchers("/animais/**", "/baias/**", "/home/sobre-nos", "/home/servicos/**", "/home/campanhas/**", "/home/doacoes/**").hasAnyRole("DIRETOR_GERAL", "GESTOR_ADOCAO")
+                 .anyRequest().authenticated()
+             )
+diff --git a/src/main/java/com/tcc/iterativa/controller/AdocaoController.java b/src/main/java/com/tcc/iterativa/controller/AdocaoController.java
+new file mode 100644
+index 0000000..206247a
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/controller/AdocaoController.java
+@@ -0,0 +1,94 @@
++package com.tcc.iterativa.controller;
++
++import com.tcc.iterativa.model.Adocao;
++import com.tcc.iterativa.model.Animal;
++import com.tcc.iterativa.service.AdocaoService;
++import org.springframework.security.core.Authentication;
++import org.springframework.stereotype.Controller;
++import org.springframework.ui.Model;
++import org.springframework.web.bind.annotation.GetMapping;
++import org.springframework.web.bind.annotation.PathVariable;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestParam;
++
++import java.util.Optional;
++
++@Controller
++public class AdocaoController {
++
++    private final AdocaoService adocaoService;
++
++    public AdocaoController(AdocaoService adocaoService) {
++        this.adocaoService = adocaoService;
++    }
++
++    @GetMapping("/adote-aqui")
++    public String listarAnimaisAdocao(Model model, Authentication authentication) {
++        model.addAttribute("animais", adocaoService.listarAnimaisDisponiveisParaAdocao());
++        model.addAttribute("autenticado", authentication != null);
++        return "adocao/lista-animais";
++    }
++
++    @GetMapping("/animais/perfil/{id}")
++    public String verPerfilAnimal(@PathVariable Long id, Model model, Authentication authentication) {
++        Optional<Animal> animal = adocaoService.buscarAnimalPorId(id);
++        if (animal.isEmpty()) {
++            return "redirect:/adote-aqui";
++        }
++        model.addAttribute("animal", animal.get());
++        model.addAttribute("autenticado", authentication != null);
++        return "adocao/perfil-animal";
++    }
++
++    @GetMapping("/adocoes/termo/{animalId}")
++    public String termoAdocaoForm(@PathVariable Long animalId, Authentication authentication, Model model) {
++        if (authentication == null) {
++            return "redirect:/login?redirect=/adocoes/termo/" + animalId;
++        }
++        Optional<Animal> animal = adocaoService.buscarAnimalPorId(animalId);
++        if (animal.isEmpty()) {
++            return "redirect:/adote-aqui";
++        }
++        model.addAttribute("animal", animal.get());
++        return "adocao/termo";
++    }
++
++    @PostMapping("/adocoes/solicitar")
++    public String solicitarAdocao(
++            @RequestParam Long animalId,
++            @RequestParam(required = false) String termoAceito,
++            Authentication authentication,
++            Model model) {
++        if (authentication == null) {
++            return "redirect:/login";
++        }
++        try {
++            boolean aceito = "on".equals(termoAceito) || "true".equals(termoAceito);
++            adocaoService.criarPedidoAdocao(animalId, authentication.getName(), aceito);
++            return "redirect:/adocoes/minhas";
++        } catch (Exception e) {
++            model.addAttribute("erro", e.getMessage());
++            Optional<Animal> animal = adocaoService.buscarAnimalPorId(animalId);
++            animal.ifPresent(a -> model.addAttribute("animal", a));
++            return "adocao/termo";
++        }
++    }
++
++    @GetMapping("/adocoes/minhas")
++    public String minhasAdocoes(Authentication authentication, Model model) {
++        if (authentication == null) {
++            return "redirect:/login";
++        }
++        model.addAttribute("adocoes", adocaoService.listarAdocoesAdotante(authentication.getName()));
++        return "adocao/minhas-adocoes";
++    }
++
++    @GetMapping("/adocoes/fila")
++    public String filaAdocoes(Authentication authentication, Model model) {
++        if (authentication == null) {
++            return "redirect:/login";
++        }
++        model.addAttribute("adocoes", adocaoService.listarFilaAdocao());
++        return "adocao/fila";
++    }
++}
+diff --git a/src/main/java/com/tcc/iterativa/model/Adocao.java b/src/main/java/com/tcc/iterativa/model/Adocao.java
+new file mode 100644
+index 0000000..0468907
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/model/Adocao.java
+@@ -0,0 +1,51 @@
++package com.tcc.iterativa.model;
++
++import jakarta.persistence.*;
++import java.time.LocalDateTime;
++
++@Entity
++@Table(name = "adocoes")
++public class Adocao {
++
++    @Id
++    @GeneratedValue(strategy = GenerationType.IDENTITY)
++    private Long id;
++
++    @ManyToOne
++    @JoinColumn(name = "animal_id", nullable = false)
++    private Animal animal;
++
++    @ManyToOne
++    @JoinColumn(name = "adotante_id", nullable = false)
++    private Usuario adotante;
++
++    @Column(nullable = false)
++    private String estado; // AGUARDANDO, REPROVADO, AGUARDANDO_VISITA, DESISTENCIA, ADOTADO, DEVOLVIDO, REVOGADO
++
++    @Column(nullable = false)
++    private LocalDateTime dataPedido;
++
++    public Adocao() {}
++
++    public Adocao(Animal animal, Usuario adotante, String estado, LocalDateTime dataPedido) {
++        this.animal = animal;
++        this.adotante = adotante;
++        this.estado = estado;
++        this.dataPedido = dataPedido;
++    }
++
++    public Long getId() { return id; }
++    public void setId(Long id) { this.id = id; }
++
++    public Animal getAnimal() { return animal; }
++    public void setAnimal(Animal animal) { this.animal = animal; }
++
++    public Usuario getAdotante() { return adotante; }
++    public void setAdotante(Usuario adotante) { this.adotante = adotante; }
++
++    public String getEstado() { return estado; }
++    public void setEstado(String estado) { this.estado = estado; }
++
++    public LocalDateTime getDataPedido() { return dataPedido; }
++    public void setDataPedido(LocalDateTime dataPedido) { this.dataPedido = dataPedido; }
++}
+diff --git a/src/main/java/com/tcc/iterativa/repository/AdocaoRepository.java b/src/main/java/com/tcc/iterativa/repository/AdocaoRepository.java
+new file mode 100644
+index 0000000..7ce28d2
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/repository/AdocaoRepository.java
+@@ -0,0 +1,15 @@
++package com.tcc.iterativa.repository;
++
++import com.tcc.iterativa.model.Adocao;
++import com.tcc.iterativa.model.Animal;
++import com.tcc.iterativa.model.Usuario;
++import org.springframework.data.jpa.repository.JpaRepository;
++import org.springframework.stereotype.Repository;
++import java.util.List;
++
++@Repository
++public interface AdocaoRepository extends JpaRepository<Adocao, Long> {
++    List<Adocao> findByAnimal(Animal animal);
++    List<Adocao> findByAdotanteOrderByDataPedidoAsc(Usuario adotante);
++    List<Adocao> findByEstadoOrderByDataPedidoAsc(String estado);
++}
+diff --git a/src/main/java/com/tcc/iterativa/service/AdocaoService.java b/src/main/java/com/tcc/iterativa/service/AdocaoService.java
+new file mode 100644
+index 0000000..79a214b
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/service/AdocaoService.java
+@@ -0,0 +1,88 @@
++package com.tcc.iterativa.service;
++
++import com.tcc.iterativa.model.Adocao;
++import com.tcc.iterativa.model.Animal;
++import com.tcc.iterativa.model.Usuario;
++import com.tcc.iterativa.repository.AdocaoRepository;
++import com.tcc.iterativa.repository.AnimalRepository;
++import com.tcc.iterativa.repository.UsuarioRepository;
++import org.springframework.stereotype.Service;
++import java.time.LocalDateTime;
++import java.util.List;
++import java.util.Optional;
++import java.util.stream.Collectors;
++
++@Service
++public class AdocaoService {
++
++    private final AdocaoRepository adocaoRepository;
++    private final AnimalRepository animalRepository;
++    private final UsuarioRepository usuarioRepository;
++
++    public AdocaoService(AdocaoRepository adocaoRepository, AnimalRepository animalRepository, UsuarioRepository usuarioRepository) {
++        this.adocaoRepository = adocaoRepository;
++        this.animalRepository = animalRepository;
++        this.usuarioRepository = usuarioRepository;
++    }
++
++    public List<Animal> listarAnimaisDisponiveisParaAdocao() {
++        List<Animal> todos = animalRepository.findAll();
++        return todos.stream().filter(a -> 
++            "Sim".equals(a.getDisponivelAdocao()) &&
++            !"Sim".equals(a.getEmTratamento()) &&
++            !"Sim".equals(a.getPatrimonioTombado())
++        ).collect(Collectors.toList());
++    }
++
++    public Optional<Animal> buscarAnimalPorId(Long id) {
++        return animalRepository.findById(id);
++    }
++
++    public Adocao criarPedidoAdocao(Long animalId, String emailAdotante, boolean termoAceito) throws Exception {
++        if (!termoAceito) {
++            throw new IllegalArgumentException("O termo de adoção deve ser aceito antes de prosseguir.");
++        }
++        Optional<Animal> animalOpt = animalRepository.findById(animalId);
++        if (animalOpt.isEmpty()) {
++            throw new IllegalArgumentException("Animal não encontrado.");
++        }
++        Animal animal = animalOpt.get();
++        if (!"Sim".equals(animal.getDisponivelAdocao()) || "Sim".equals(animal.getEmTratamento()) || "Sim".equals(animal.getPatrimonioTombado())) {
++            throw new IllegalArgumentException("Este animal não está disponível para adoção.");
++        }
++
++        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(emailAdotante);
++        if (usuarioOpt.isEmpty()) {
++            throw new IllegalArgumentException("Usuário adotante não encontrado.");
++        }
++        Usuario adotante = usuarioOpt.get();
++
++        Adocao adocao = new Adocao(animal, adotante, "AGUARDANDO", LocalDateTime.now());
++        return adocaoRepository.save(adocao);
++    }
++
++    public List<Adocao> listarAdocoesAdotante(String emailAdotante) {
++        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(emailAdotante);
++        if (usuarioOpt.isPresent()) {
++            return adocaoRepository.findByAdotanteOrderByDataPedidoAsc(usuarioOpt.get());
++        }
++        return List.of();
++    }
++
++    public List<Adocao> listarFilaAdocao() {
++        List<Adocao> aguardando = adocaoRepository.findByEstadoOrderByDataPedidoAsc("AGUARDANDO");
++        List<Adocao> outras = adocaoRepository.findAll().stream()
++                .filter(a -> !"AGUARDANDO".equals(a.getState())) // ou estado
++                .collect(Collectors.toList());
++        
++        List<Adocao> todas = adocaoRepository.findAll();
++        todas.sort((a1, a2) -> {
++            boolean a1Ag = "AGUARDANDO".equals(a1.getEstado());
++            boolean a2Ag = "AGUARDANDO".equals(a2.getEstado());
++            if (a1Ag && !a2Ag) return -1;
++            if (!a1Ag && a2Ag) return 1;
++            return a1.getDataPedido().compareTo(a2.getDataPedido());
++        });
++        return todas;
++    }
++}
+diff --git a/src/main/resources/templates/adocao/fila.html b/src/main/resources/templates/adocao/fila.html
+new file mode 100644
+index 0000000..2e7d088
+--- /dev/null
++++ b/src/main/resources/templates/adocao/fila.html
+@@ -0,0 +1,35 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Fila de Adoções [PRT-16]</title>
++</head>
++<body>
++    <h2>DogTech - Fila de Adoções [PRT-16] (UC005 / RN008)</h2>
++    <p><a href="/home-admin">Voltar</a></p>
++
++    <table border="1">
++        <thead>
++            <tr>
++                <th>ID Pedido</th>
++                <th>Animal</th>
++                <th>Adotante (E-mail)</th>
++                <th>Data do Pedido</th>
++                <th>Estado</th>
++            </tr>
++        </thead>
++        <tbody>
++            <tr th:if="${adocoes.empty}">
++                <td colspan="5">Nenhum pedido de adoção na fila.</td>
++            </tr>
++            <tr th:each="ad : ${adocoes}">
++                <td th:text="${ad.id}"></td>
++                <td th:text="${ad.animal.nomeReferencia}"></td>
++                <td th:text="${ad.adotante.email}"></td>
++                <td th:text="${ad.dataPedido}"></td>
++                <td th:text="${ad.estado}"></td>
++            </tr>
++        </tbody>
++    </table>
++</body>
++</html>
+diff --git a/src/main/resources/templates/adocao/lista-animais.html b/src/main/resources/templates/adocao/lista-animais.html
+new file mode 100644
+index 0000000..6eedf95
+--- /dev/null
++++ b/src/main/resources/templates/adocao/lista-animais.html
+@@ -0,0 +1,43 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Pesquisa de Animais [PRT-11 / PRT-12]</title>
++</head>
++<body>
++    <h2>DogTech - Animais Disponíveis para Adoção [PRT-11] (UC005)</h2>
++    <p>
++        <a href="/">Página Inicial</a> |
++        <a th:if="${!autenticado}" href="/login">Entrar</a>
++        <a th:if="${autenticado}" href="/adocoes/minhas">Minhas Adoções [PRT-17]</a>
++    </p>
++
++    <div th:if="${animais.empty}">
++        <p>Não há animais disponíveis no momento [FE-2].</p>
++    </div>
++
++    <table border="1" th:if="${!animais.empty}">
++        <thead>
++            <tr>
++                <th>Nome / Referência</th>
++                <th>Espécie</th>
++                <th>Raça</th>
++                <th>Sexo</th>
++                <th>Ação</th>
++            </tr>
++        </thead>
++        <tbody>
++            <tr th:each="a : ${animais}">
++                <td><a th:href="@{'/animais/perfil/' + ${a.id}}" th:text="${a.nomeReferencia}"></a></td>
++                <td th:text="${a.especie}"></td>
++                <td th:text="${a.raca}"></td>
++                <td th:text="${a.sexo}"></td>
++                <td>
++                    <a th:href="@{'/animais/perfil/' + ${a.id}}">Ver Perfil [PRT-13]</a> |
++                    <a th:href="@{'/adocoes/termo/' + ${a.id}}">Adotar</a>
++                </td>
++            </tr>
++        </tbody>
++    </table>
++</body>
++</html>
+diff --git a/src/main/resources/templates/adocao/minhas-adocoes.html b/src/main/resources/templates/adocao/minhas-adocoes.html
+new file mode 100644
+index 0000000..ecc40d6
+--- /dev/null
++++ b/src/main/resources/templates/adocao/minhas-adocoes.html
+@@ -0,0 +1,31 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Minhas Adoções [PRT-17]</title>
++</head>
++<body>
++    <h2>DogTech - Meus Pedidos de Adoção [PRT-17] (UC005)</h2>
++    <p><a href="/adote-aqui">Voltar para Adoções</a> | <a href="/">Home</a></p>
++
++    <table border="1">
++        <thead>
++            <tr>
++                <th>Animal</th>
++                <th>Data do Pedido</th>
++                <th>Estado</th>
++            </tr>
++        </thead>
++        <tbody>
++            <tr th:if="${adocoes.empty}">
++                <td colspan="3">Você não possui pedidos de adoção registrados.</td>
++            </tr>
++            <tr th:each="ad : ${adocoes}">
++                <td th:text="${ad.animal.nomeReferencia}"></td>
++                <td th:text="${ad.dataPedido}"></td>
++                <td th:text="${ad.estado}"></td>
++            </tr>
++        </tbody>
++    </table>
++</body>
++</html>
+diff --git a/src/main/resources/templates/adocao/perfil-animal.html b/src/main/resources/templates/adocao/perfil-animal.html
+new file mode 100644
+index 0000000..67121b4
+--- /dev/null
++++ b/src/main/resources/templates/adocao/perfil-animal.html
+@@ -0,0 +1,28 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Perfil do Animal [PRT-13]</title>
++</head>
++<body>
++    <h2>DogTech - Perfil do Animal: <span th:text="${animal.nomeReferencia}"></span> [PRT-13] (UC005)</h2>
++    <p><a href="/adote-aqui">Voltar para Pesquisa</a></p>
++
++    <ul>
++        <li><strong>Espécie:</strong> <span th:text="${animal.especie}"></span></li>
++        <li><strong>Sexo:</strong> <span th:text="${animal.sexo}"></span></li>
++        <li><strong>Raça:</strong> <span th:text="${animal.raca}"></span></li>
++        <li><strong>Idade Aproximada:</strong> <span th:text="${animal.idadeAproximada}"></span></li>
++        <li><strong>Porte:</strong> <span th:text="${animal.porte}"></span></li>
++        <li><strong>Castrado:</strong> <span th:text="${animal.castrado}"></span></li>
++        <li><strong>Vermifugado:</strong> <span th:text="${animal.vermifugado}"></span></li>
++        <li><strong>Temperamento:</strong> <span th:text="${animal.temperamento}"></span></li>
++        <li><strong>História:</strong> <span th:text="${animal.historia}"></span></li>
++        <li><strong>Contato do Autor / Responsável:</strong> <span th:text="${animal.contatoAutor}"></span></li>
++    </ul>
++
++    <p>
++        <a th:href="@{'/adocoes/termo/' + ${animal.id}}"><button>Quero Adotar</button></a>
++    </p>
++</body>
++</html>
+diff --git a/src/main/resources/templates/adocao/termo.html b/src/main/resources/templates/adocao/termo.html
+new file mode 100644
+index 0000000..6aa3e0c
+--- /dev/null
++++ b/src/main/resources/templates/adocao/termo.html
+@@ -0,0 +1,30 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Termo de Adoção [PRT-15]</title>
++</head>
++<body>
++    <h2>DogTech - Termo de Compromisso de Adoção [PRT-15] (UC005)</h2>
++
++    <div th:if="${erro}" style="color: red;">
++        <p th:text="${erro}"></p>
++    </div>
++
++    <p>Você está solicitando a adoção do animal: <strong th:text="${animal.nomeReferencia}"></strong></p>
++
++    <div style="border: 1px solid #ccc; padding: 15px; margin-bottom: 15px;">
++        <p><strong>Termo de Responsabilidade:</strong></p>
++        <p>Declaro que assumo total responsabilidade pelos cuidados, alimentação, saúde, bem-estar e segurança do animal adotado, comprometendo-me a zelar por sua integridade física e psicológica durante toda a sua vida.</p>
++    </div>
++
++    <form action="/adocoes/solicitar" method="post">
++        <input type="hidden" name="animalId" th:value="${animal.id}">
++        <label>
++            <input type="checkbox" name="termoAceito" value="true" required> Li e aceito o termo de adoção [PRT-15]
++        </label><br><br>
++        <button type="submit">Aceitar e Enviar Pedido</button>
++        <a href="/adote-aqui"><button type="button">Cancelar</button></a>
++    </form>
++</body>
++</html>
+diff --git a/src/main/resources/templates/home/admin.html b/src/main/resources/templates/home/admin.html
+index 393e2e5..caea20c 100644
+--- a/src/main/resources/templates/home/admin.html
++++ b/src/main/resources/templates/home/admin.html
+@@ -4,10 +4,12 @@
+ <body>
+     <h1>Bem-vindo à Tela Inicial Administrativa [PRT-2]</h1>
+     <p><a href="/">Ver Página Inicial Pública</a></p>
++    <p><a href="/adote-aqui">Ver Animais / Adoções [PRT-12]</a></p>
++    <p><a href="/adocoes/fila">Fila de Adoções [PRT-16]</a></p>
+     <p><a href="/meus-dados">Meus Dados (UC011)</a></p>
+     <p><a href="/animais/novo">Cadastrar Animal (UC003 / RF002)</a></p>
+     <p><a href="/baias">Gerenciar Baias (RF008)</a></p>
+-    <p th:if="${#authorization.expression('hasRole(''DIRETOR_GERAL'')')}"><a href="/usuarios/gerenciar">Gerenciar Atores / Privilégios [PRT-10] (UC004)</a></p>
++    <p th:if="${#authorization.expression('hasRole("DIRETOR_GERAL")')}"><a href="/usuarios/gerenciar">Gerenciar Atores / Privilégios [PRT-10] (UC004)</a></p>
+     <hr>
+     <h3>Gerenciamento da Página Inicial (UC009)</h3>
+     <p><a href="/home/sobre-nos">Editar Texto 'Sobre Nós' [PRT-31]</a></p>
+diff --git a/src/main/resources/templates/home/adotante.html b/src/main/resources/templates/home/adotante.html
+index a088323..494710c 100644
+--- a/src/main/resources/templates/home/adotante.html
++++ b/src/main/resources/templates/home/adotante.html
+@@ -3,6 +3,7 @@
+ <head><meta charset="UTF-8"><title>Home Adotante</title></head>
+ <body>
+     <h1>Bem-vindo à Tela Inicial do Adotante [PRT-3]</h1>
++    <p><a href="/">Página Inicial</a> | <a href="/adote-aqui">Adote Aqui [PRT-11]</a> | <a href="/adocoes/minhas">Minhas Adoções [PRT-17]</a></p>
+     <p><a href="/meus-dados">Meus Dados (UC011)</a></p>
+     <a href="/login">Sair</a>
+ </body>
+diff --git a/src/main/resources/templates/index.html b/src/main/resources/templates/index.html
+index 9a905a4..8cc0814 100644
+--- a/src/main/resources/templates/index.html
++++ b/src/main/resources/templates/index.html
+@@ -6,7 +6,10 @@
+ </head>
+ <body>
+     <h1>DogTech - Sistema de Gerenciamento de Adoção</h1>
+-    <p><a href="/login">Entrar / Cadastrar</a></p>
++    <p>
++        <a href="/login">Entrar / Cadastrar</a> |
++        <a href="/adote-aqui">Adote Aqui [PRT-11]</a>
++    </p>
+ 
+     <hr>
+     <h2>Sobre Nós [PRT-31]</h2>
+diff --git a/src/test/java/com/tcc/iterativa/service/AdocaoServiceI6Test.java b/src/test/java/com/tcc/iterativa/service/AdocaoServiceI6Test.java
+new file mode 100644
+index 0000000..c4174f9
+--- /dev/null
++++ b/src/test/java/com/tcc/iterativa/service/AdocaoServiceI6Test.java
+@@ -0,0 +1,105 @@
++package com.tcc.iterativa.service;
++
++import com.tcc.iterativa.model.Adocao;
++import com.tcc.iterativa.model.Animal;
++import com.tcc.iterativa.model.Usuario;
++import com.tcc.iterativa.repository.AdocaoRepository;
++import com.tcc.iterativa.repository.AnimalRepository;
++import com.tcc.iterativa.repository.UsuarioRepository;
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.context.SpringBootTest;
++
++import java.time.LocalDate;
++import java.util.List;
++
++import static org.junit.jupiter.api.Assertions.*;
++
++@SpringBootTest
++class AdocaoServiceI6Test {
++
++    @Autowired
++    private AdocaoService adocaoService;
++
++    @Autowired
++    private AnimalRepository animalRepository;
++
++    @Autowired
++    private UsuarioRepository usuarioRepository;
++
++    @Autowired
++    private AdocaoRepository adocaoRepository;
++
++    @Autowired
++    private AnimalService animalService;
++
++    @Autowired
++    private UsuarioService usuarioService;
++
++    @BeforeEach
++    void setUp() {
++        adocaoRepository.deleteAll();
++        animalRepository.deleteAll();
++        usuarioRepository.deleteAll();
++    }
++
++    @Test
++    void testCriarPedidoAdocaoSucesso() throws Exception {
++        Animal animal = animalService.cadastrar(
++            "Canina", "Macho", "Sim", "Sim", "2 anos", "Labrador",
++            "Dócil", "Médio", null, "Totó", "História",
++            "Não", "Não", "Sim", null, null, null, "João", null
++        );
++
++        Usuario usuario = usuarioService.cadastrar(
++            "adotante@dogtech.com", "senha1234", "ADOTANTE",
++            "Adotante Teste", "12345678901", LocalDate.of(1990,1,1),
++            "32999999999", "Rua A", "1", null, "Bairro", "JF", "MG", "36050000", null, "Não"
++        );
++
++        Adocao adocao = adocaoService.criarPedidoAdocao(animal.getId(), usuario.getEmail(), true);
++
++        assertNotNull(adocao.getId());
++        assertEquals("AGUARDANDO", adocao.getEstado());
++        assertEquals("Totó", adocao.getAnimal.getNomeReferencia() != null ? adocao.getAnimal().getNomeReferencia() : "");
++    }
++
++    @Test
++    void testCriarPedidoAdocaoFalhaTermoNaoAceito() throws Exception {
++        Animal animal = animalService.cadastrar(
++            "Canina", "Macho", "Sim", "Sim", "2 anos", "Labrador",
++            "Dócil", "Médio", null, "Totó", "História",
++            "Não", "Não", "Sim", null, null, null, "João", null
++        );
++
++        Usuario usuario = usuarioService.cadastrar(
++            "adotante2@dogtech.com", "senha1234", "ADOTANTE",
++            "Adotante Teste 2", "12345678902", LocalDate.of(1990,1,1),
++            "32999999999", "Rua A", "1", null, "Bairro", "JF", "MG", "36050000", null, "Não"
++        );
++
++        assertThrows(IllegalArgumentException.class, () -> {
++            adocaoService.criarPedidoAdocao(animal.getId(), usuario.getEmail(), false);
++        });
++    }
++
++    @Test
++    void testListarAnimaisDisponiveisOmiteTratamentoETombados() throws Exception {
++        animalService.cadastrar(
++            "Canina", "Macho", "Sim", "Sim", "2 anos", "Labrador",
++            "Dócil", "Médio", null, "Disponível", "História",
++            "Não", "Não", "Sim", null, null, null, "João", null
++        );
++
++        animalService.cadastrar(
++            "Canina", "Macho", "Sim", "Sim", "2 anos", "Labrador",
++            "Dócil", "Médio", null, "Tratamento", "História",
++            "Não", "Sim", "Sim", null, null, null, "João", null
++        );
++
++        List<Animal> disponiveis = adocaoService.listarAnimaisDisponiveisParaAdocao();
++        assertEquals(1, disponiveis.size());
++        assertEquals("Disponível", disponiveis.get(0).getNomeReferencia());
++    }
++}

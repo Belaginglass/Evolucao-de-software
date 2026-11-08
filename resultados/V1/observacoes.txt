@@ -1,0 +1,67 @@
+V1 = I1 (Autenticação e controle inicial de acesso, UC001/RF001/RN001/RN005).
+
+RESUMO DO PROCESSO DE GERAÇÃO (ver resultados/log_dificuldades_geracao.md para o
+detalhe completo de cada tentativa):
+- Tentativas 1-2: formato unified diff (decisão original da etapa 8.1) falhou nas
+  duas vezes por erro de contagem de linhas no cabeçalho do hunk, gerado pelo
+  próprio modelo. Decisão (autorizada pelo pesquisador): trocar para JSON
+  (caminho+conteúdo completo).
+- Tentativas 3-4: formato JSON, mas caminho de arquivo sem o prefixo "src/main/java/"
+  (ex.: "com/tcc/iterativa/config/SenhaConfig.java"). Corrigido o prompt (exemplo
+  explícito de caminho correto/incorreto).
+- Tentativa 5: aplicada com sucesso (11 arquivos criados). Bug no próprio script
+  (gerar_codigo.py) encontrado e corrigido: `git diff` não mostra arquivos
+  untracked, então o relatório de "arquivos alterados" aparecia vazio mesmo com os
+  arquivos escritos corretamente — corrigido com `git add -A` antes do diff.
+- Avaliação: FALHA de compilação — `UsuarioService.java:63` com parâmetro sem tipo
+  declarado (`novaSenha` em vez de `String novaSenha`). Erro genuíno do modelo.
+- Tentativa 6 (correção): corrigiu o parâmetro, mas introduziu um novo problema —
+  `SecurityConfig.java` usa Spring Security sem a dependência correspondente no
+  `pom.xml`.
+- Tentativa 7 (correção): resposta com JSON inválido (caractere de controle não
+  escapado — quebra de linha literal dentro de uma string). Corrigido o parser
+  (`json.loads(..., strict=False)`), não o conteúdo da resposta.
+- Tentativa 8 (correção, após o fix do parser): adicionou a dependência
+  `spring-boot-starter-security` ao `pom.xml`, mas introduziu um erro de sintaxe XML
+  ao reescrever o arquivo inteiro (`</goals>>` com `>` duplicado).
+- Tentativa 9 (correção): corrigiu o XML. Compilação e os 4 testes JUnit passaram.
+- Avaliação funcional manual (HTTP, via curl): encontrado um BUG FUNCIONAL real não
+  capturado pelos testes JUnit do próprio Gemini — o login autentica e redireciona
+  (302) corretamente, mas a página de destino (/home-admin, /home-adotante) retornava
+  HTTP 403, porque o Spring Security exige autenticação nessas rotas
+  (`.anyRequest().authenticated()`), e o login customizado nunca estabelecia uma
+  sessão autenticada no SecurityContext.
+- Tentativa 10: falha de infraestrutura (503 Service Unavailable da própria API do
+  Gemini, transitório) — registrada, sem relação com o conteúdo gerado.
+- Tentativa 11 (correção): corrigiu o problema de sessão (usa
+  SecurityContextHolder/SecurityContextRepository). Confirmado via novo teste manual
+  HTTP: login agora resulta em sessão autenticada (cookie JSESSIONID) e acesso
+  correto à página de destino (HTTP 200).
+
+Total: 11 chamadas à API para fechar V1 (todas preservadas em
+resultados/V1/tentativas/tentativa_01 a tentativa_11), sendo 2 com o formato
+descartado (diff), 2 com erro de caminho, 1 aplicação bem-sucedida inicial, 4
+correções de bugs reais de código, 1 falha de infraestrutura e 1 correção final.
+
+RESULTADOS DOS CASOS DE TESTE FUNCIONAIS (ver aba "Execuções por Versão" de
+testes/casos_teste.xlsx para o detalhe):
+- CT001 (RF001, login válido): Aprovado (após a correção da tentativa 11).
+- CT002 (RF001, login inválido): Aprovado.
+- CT003 (RN001, validação de formato): Aprovado.
+- CT004 (RN005, recuperação de senha): Aprovado.
+- CT005 (RN005, token expirado): Não executado (requer simular passagem de 24h).
+- CT045 (RNF001, criptografia): Aprovado — SHA-256 + salt de 8 bits confirmado por
+  leitura de código.
+- CT046 (RNF008, campo de ajuda): Aprovado — ícones "?" com atributo title na tela
+  de login.
+
+Taxa de aprovação (TA) oficial de V1: 6 aprovados / 6 executados = 100% (CT005 não
+entra no denominador, por não ter sido executado).
+
+OBSERVAÇÃO MENOR (não corrigida, não bloqueia nada): PasswordUtils.validateFormat
+declara uma variável `emailRegex` (que implementaria a regra "apenas letras/números/@"
+da RN001 de forma mais estrita) mas nunca a utiliza — a validação real checa apenas
+caracteres proibidos + exatamente um "@" + senha ≥ 8 caracteres, um pouco mais
+permissiva do que o texto literal da RN001 (aceitaria, por exemplo, um e-mail com "!"
+na parte local). Como nenhum dos CTs definidos exercita especificamente esse caso
+extremo, isso não gerou uma reprovação, mas fica registrado para referência futura.

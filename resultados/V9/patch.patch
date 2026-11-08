@@ -1,0 +1,661 @@
+diff --git a/src/main/java/com/tcc/iterativa/config/SecurityConfig.java b/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+index 9d4eed8..bc21517 100644
+--- a/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
++++ b/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+@@ -15,7 +15,7 @@ public class SecurityConfig {
+         http
+             .csrf(csrf -> csrf.disable())
+             .authorizeHttpRequests(auth -> auth
+-                .requestMatchers("/", "/login", "/cadastro", "/recuperar-senha", "/atualizar-senha", "/buscar-cep", "/h2-console/**", "/adote-aqui", "/animais/perfil/**", "/adotados").permitAll()
++                .requestMatchers("/", "/login", "/cadastro", "/recuperar-senha", "/atualizar-senha", "/buscar-cep", "/h2-console/**", "/adote-aqui", "/animais/perfil/**", "/adotados", "/apadrinhamento/causa/**", "/apadrinhamento/financeiro/**").permitAll()
+                 .requestMatchers("/usuarios/gerenciar", "/usuarios/privilegios", "/usuarios/excluir", "/adocoes/fila", "/adocoes/avaliar", "/adocoes/aprovar", "/adocoes/reprovar", "/adocoes/reprovar-todos", "/adocoes/manual", "/adocoes/pos-adocao/gestor/**").hasAnyRole("DIRETOR_GERAL", "GESTOR_ADOCAO")
+                 .requestMatchers("/animais/**", "/baias/**", "/home/sobre-nos", "/home/servicos/**", "/home/campanhas/**", "/home/doacoes/**").hasAnyRole("DIRETOR_GERAL", "GESTOR_ADOCAO")
+                 .anyRequest().authenticated()
+diff --git a/src/main/java/com/tcc/iterativa/controller/ApadrinhamentoController.java b/src/main/java/com/tcc/iterativa/controller/ApadrinhamentoController.java
+new file mode 100644
+index 0000000..1bb79ca
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/controller/ApadrinhamentoController.java
+@@ -0,0 +1,91 @@
++package com.tcc.iterativa.controller;
++
++import com.tcc.iterativa.model.Apadrinhamento;
++import com.tcc.iterativa.model.DoacaoFinanceira;
++import com.tcc.iterativa.model.Animal;
++import com.tcc.iterativa.service.AdocaoService;
++import com.tcc.iterativa.service.ApadrinhamentoService;
++import org.springframework.security.core.Authentication;
++import org.springframework.stereotype.Controller;
++import org.springframework.ui.Model;
++import org.springframework.web.bind.annotation.GetMapping;
++import org.springframework.web.bind.annotation.PathVariable;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestParam;
++
++import java.time.LocalDate;
++import java.time.LocalTime;
++import java.util.Optional;
++
++@Controller
++public class ApadrinhamentoController {
++
++    private final ApadrinhamentoService apadrinhamentoService;
++    private final AdocaoService adocaoService;
++
++    public ApadrinhamentoController(ApadrinhamentoService apadrinhamentoService, AdocaoService adocaoService) {
++        this.apadrinhamentoService = apadrinhamentoService;
++        this.adocaoService = adocaoService;
++    }
++
++    @GetMapping("/apadrinhamento/causa/{id}")
++    public String apadrinhamentoCausaExterna(@PathVariable Long id) {
++        // UC007: Direciona para link externo cadastrado
++        return "redirect:https://example.com/projeto-causa-" + id;
++    }
++
++    @GetMapping("/apadrinhamento/animal/{id}")
++    public String apadrinhamentoAnimalForm(@PathVariable Long id, Model model, Authentication authentication) {
++        Optional<Animal> animalOpt = adocaoService.buscarAnimalPorId(id);
++        if (animalOpt.isEmpty()) {
++            return "redirect:/adote-aqui";
++        }
++        model.addAttribute("animal", animalOpt.get());
++        model.addAttribute("autenticado", authentication != null);
++        return "apadrinhamento/animal";
++    }
++
++    @PostMapping("/apadrinhamento/animal")
++    public String solicitarApadrinhamentoAnimal(
++            @RequestParam Long animalId,
++            @RequestParam String tipoServico,
++            @RequestParam LocalDate dia,
++            @RequestParam LocalTime horario,
++            Authentication authentication,
++            Model model) {
++        if (authentication == null) {
++            return "redirect:/login?redirect=/apadrinhamento/animal/" + animalId;
++        }
++        try {
++            apadrinhamentoService.criarApadrinhamentoServico(animalId, authentication.getName(), tipoServico, dia, horario);
++            model.addAttribute("sucesso", "Pedido de apadrinhamento e prestação de serviço cadastrado com sucesso! Agenda criada [RN009].");
++        } catch (Exception e) {
++            model.addAttribute("erro", e.getMessage());
++        }
++        Optional<Animal> animalOpt = adocaoService.buscarAnimalPorId(animalId);
++        animalOpt.ifPresent(a -> model.addAttribute("animal", a));
++        model.addAttribute("autenticado", true);
++        return "apadrinhamento/animal";
++    }
++
++    @GetMapping("/apadrinhamento/financeiro")
++    public String doacaoFinanceiraForm(Authentication authentication, Model model) {
++        model.addAttribute("autenticado", authentication != null);
++        return "apadrinhamento/financeiro";
++    }
++
++    @PostMapping("/apadrinhamento/financeiro")
++    public String gerarBoleto(
++            @RequestParam(required = false) String nome,
++            @RequestParam(required = false) String email,
++            @RequestParam Double valor,
++            @RequestParam String frequencia,
++            Authentication authentication,
++            Model model) {
++        String emailLogado = authentication != null ? authentication.getName() : null;
++        DoacaoFinanceira doacao = apadrinhamentoService.gerarBoletoDoacao(nome, email, valor, frequencia, emailLogado);
++        model.addAttribute("doacao", doacao);
++        model.addAttribute("sucesso", "Boleto gerado com sucesso [FA-16]!");
++        return "apadrinhamento/boleto";
++    }
++}
+diff --git a/src/main/java/com/tcc/iterativa/model/AgendaAnimal.java b/src/main/java/com/tcc/iterativa/model/AgendaAnimal.java
+new file mode 100644
+index 0000000..40d0ada
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/model/AgendaAnimal.java
+@@ -0,0 +1,47 @@
++package com.tcc.iterativa.model;
++
++import jakarta.persistence.*;
++import java.time.LocalDate;
++import java.time.LocalTime;
++
++@Entity
++@Table(name = "agendas_animais")
++public class AgendaAnimal {
++
++    @Id
++    @GeneratedValue(strategy = GenerationType.IDENTITY)
++    private Long id;
++
++    @ManyToOne
++    @JoinColumn(name = "animal_id", nullable = false)
++    private Animal animal;
++
++    private LocalDate dia;
++    private LocalTime horario;
++
++    private String descricao;
++
++    public AgendaAnimal() {}
++
++    public AgendaAnimal(Animal animal, LocalDate dia, LocalTime horario, String descricao) {
++        this.animal = animal;
++        this.dia = dia;
++        this.horario = horario;
++        this.descricao = descricao;
++    }
++
++    public Long getId() { return id; }
++    public void setId(Long id) { this.id = id; }
++
++    public Animal getAnimal() { return animal; }
++    public void setAnimal(Animal animal) { this.animal = animal; }
++
++    public LocalDate getDia() { return dia; }
++    public void setDia(LocalDate dia) { this.dia = dia; }
++
++    public LocalTime getHorario() { return horario; }
++    public void setHorario(LocalTime horario) { this.horario = horario; }
++
++    public String getDescricao() { return descricao; }
++    public void setDescricao(String descricao) { this.descricao = descricao; }
++}
+diff --git a/src/main/java/com/tcc/iterativa/model/Apadrinhamento.java b/src/main/java/com/tcc/iterativa/model/Apadrinhamento.java
+new file mode 100644
+index 0000000..b6ddfd5
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/model/Apadrinhamento.java
+@@ -0,0 +1,70 @@
++package com.tcc.iterativa.model;
++
++import jakarta.persistence.*;
++import java.time.LocalDate;
++import java.time.LocalTime;
++import java.time.LocalDateTime;
++
++@Entity
++@Table(name = "apadrinhamentos")
++public class Apadrinhamento {
++
++    @Id
++    @GeneratedValue(strategy = GenerationType.IDENTITY)
++    private Long id;
++
++    @ManyToOne
++    @JoinColumn(name = "animal_id", nullable = false)
++    private Animal animal;
++
++    @ManyToOne
++    @JoinColumn(name = "adotante_id", nullable = false)
++    private Usuario adotante;
++
++    @Column(nullable = false)
++    private String tipoServico;
++
++    private LocalDate dia;
++    private LocalTime horario;
++
++    @Column(nullable = false)
++    private String status; // SOLICITADO, CONFIRMADO
++
++    private LocalDateTime dataPedido;
++
++    public Apadrinhamento() {}
++
++    public Apadrinhamento(Animal animal, Usuario adotante, String tipoServico, LocalDate dia, LocalTime horario, String status, LocalDateTime dataPedido) {
++        this.animal = animal;
++        this.adotante = adotante;
++        this.tipoServico = tipoServico;
++        this.dia = dia;
++        this.horario = horario;
++        this.status = status;
++        this.dataPedido = dataPedido;
++    }
++
++    public Long getId() { return id; }
++    public void setId(Long id) { this.id = id; }
++
++    public Animal getAnimal() { return animal; }
++    public void setAnimal(Animal animal) { this.animal = animal; }
++
++    public Usuario getAdotante() { return adotante; }
++    public void setAdotante(Usuario adotante) { this.adotante = adotante; }
++
++    public String getTipoServico() { return tipoServico; }
++    public void setTipoServico(String tipoServico) { this.tipoServico = tipoServico; }
++
++    public LocalDate getDia() { return dia; }
++    public void setDia(LocalDate dia) { this.dia = dia; }
++
++    public LocalTime getHorario() { return horario; }
++    public void setHorario(LocalTime horario) { this.horario = horario; }
++
++    public String getStatus() { return status; }
++    public void setStatus(String status) { this.status = status; }
++
++    public LocalDateTime getDataPedido() { return dataPedido; }
++    public void setDataPedido(LocalDateTime dataPedido) { this.dataPedido = dataPedido; }
++}
+diff --git a/src/main/java/com/tcc/iterativa/model/DoacaoFinanceira.java b/src/main/java/com/tcc/iterativa/model/DoacaoFinanceira.java
+new file mode 100644
+index 0000000..c414e48
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/model/DoacaoFinanceira.java
+@@ -0,0 +1,59 @@
++package com.tcc.iterativa.model;
++
++import jakarta.persistence.*;
++import java.time.LocalDateTime;
++
++@Entity
++@Table(name = "doacoes_financeiras")
++public class DoacaoFinanceira {
++
++    @Id
++    @GeneratedValue(strategy = GenerationType.IDENTITY)
++    private Long id;
++
++    private String nome;
++    private String email;
++    
++    @Column(nullable = false)
++    private Double valor;
++
++    @Column(nullable = false)
++    private String frequencia; // PONTUAL ou MENSAL
++
++    @Column(nullable = false)
++    private String codigoBoleto;
++
++    private LocalDateTime dataCriacao;
++
++    public DoacaoFinanceira() {}
++
++    public DoacaoFinanceira(String nome, String email, Double valor, String frequencia, String codigoBoleto, LocalDateTime dataCriacao) {
++        this.nome = nome;
++        this.email = email;
++        this.valor = valor;
++        this.frequencia = frequencia;
++        this.codigoBoleto = codigoBoleto;
++        this.dataCriacao = dataCriacao;
++    }
++
++    public Long getId() { return id; }
++    public void setId(Long id) { this.id = id; }
++
++    public String getNome() { return nome; }
++    public void setNome(String nome) { this.nome = nome; }
++
++    public String getEmail() { return email; }
++    public void setEmail(String email) { this.email = email; }
++
++    public Double getValor() { return valor; }
++    public void setValor(Double valor) { this.valor = valor; }
++
++    public String getFrequencia() { return frequencia; }
++    public void setFrequencia(String frequencia) { this.frequencia = frequencia; }
++
++    public String getCodigoBoleto() { return codigoBoleto; }
++    public void setCodigoBoleto(String codigoBoleto) { this.codigoBoleto = codigoBoleto; }
++
++    public LocalDateTime getDataCriacao() { return dataCriacao; }
++    public void setDataCriacao(LocalDateTime dataCriacao) { this.dataCriacao = dataCriacao; }
++}
+diff --git a/src/main/java/com/tcc/iterativa/repository/AgendaAnimalRepository.java b/src/main/java/com/tcc/iterativa/repository/AgendaAnimalRepository.java
+new file mode 100644
+index 0000000..fbddfa6
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/repository/AgendaAnimalRepository.java
+@@ -0,0 +1,12 @@
++package com.tcc.iterativa.repository;
++
++import com.tcc.iterativa.model.AgendaAnimal;
++import com.tcc.iterativa.model.Animal;
++import org.springframework.data.jpa.repository.JpaRepository;
++import org.springframework.stereotype.Repository;
++import java.util.List;
++
++@Repository
++public interface AgendaAnimalRepository extends JpaRepository<AgendaAnimal, Long> {
++    List<AgendaAnimal> findByAnimal(Animal animal);
++}
+diff --git a/src/main/java/com/tcc/iterativa/repository/ApadrinhamentoRepository.java b/src/main/java/com/tcc/iterativa/repository/ApadrinhamentoRepository.java
+new file mode 100644
+index 0000000..b827891
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/repository/ApadrinhamentoRepository.java
+@@ -0,0 +1,14 @@
++package com.tcc.iterativa.repository;
++
++import com.tcc.iterativa.model.Apadrinhamento;
++import com.tcc.iterativa.model.Animal;
++import com.tcc.iterativa.model.Usuario;
++import org.springframework.data.jpa.repository.JpaRepository;
++import org.springframework.stereotype.Repository;
++import java.util.List;
++
++@Repository
++public interface ApadrinhamentoRepository extends JpaRepository<Apadrinhamento, Long> {
++    List<Apadrinhamento> findByAnimal(Animal animal);
++    List<Apadrinhamento> findByAdotante(Usuario adotante);
++}
+diff --git a/src/main/java/com/tcc/iterativa/repository/DoacaoFinanceiraRepository.java b/src/main/java/com/tcc/iterativa/repository/DoacaoFinanceiraRepository.java
+new file mode 100644
+index 0000000..92a95af
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/repository/DoacaoFinanceiraRepository.java
+@@ -0,0 +1,9 @@
++package com.tcc.iterativa.repository;
++
++import com.tcc.iterativa.model.DoacaoFinanceira;
++import org.springframework.data.jpa.repository.JpaRepository;
++import org.springframework.stereotype.Repository;
++
++@Repository
++public interface DoacaoFinanceiraRepository extends JpaRepository<DoacaoFinanceira, Long> {
++}
+diff --git a/src/main/java/com/tcc/iterativa/service/ApadrinhamentoService.java b/src/main/java/com/tcc/iterativa/service/ApadrinhamentoService.java
+new file mode 100644
+index 0000000..bbcb755
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/service/ApadrinhamentoService.java
+@@ -0,0 +1,81 @@
++package com.tcc.iterativa.service;
++
++import com.tcc.iterativa.model.*;
++import com.tcc.iterativa.repository.*;
++import org.springframework.stereotype.Service;
++import java.time.LocalDate;
++import java.time.LocalDateTime;
++import java.time.LocalTime;
++import java.util.List;
++import java.util.Optional;
++import java.util.UUID;
++
++@Service
++public class ApadrinhamentoService {
++
++    private final ApadrinhamentoRepository apadrinhamentoRepository;
++    private final DoacaoFinanceiraRepository doacaoFinanceiraRepository;
++    private final AgendaAnimalRepository agendaAnimalRepository;
++    private final AnimalRepository animalRepository;
++    private final UsuarioRepository usuarioRepository;
++
++    public ApadrinhamentoService(
++            ApadrinhamentoRepository apadrinhamentoRepository,
++            DoacaoFinanceiraRepository doacaoFinanceiraRepository,
++            AgendaAnimalRepository agendaAnimalRepository,
++            AnimalRepository animalRepository,
++            UsuarioRepository usuarioRepository) {
++        this.apadrinhamentoRepository = apadrinhamentoRepository;
++        this.doacaoFinanceiraRepository = doacaoFinanceiraRepository;
++        this.agendaAnimalRepository = agendaAnimalRepository;
++        this.animalRepository = animalRepository;
++        this.usuarioRepository = usuarioRepository;
++    }
++
++    public Apadrinhamento criarApadrinhamentoServico(Long animalId, String emailAdotante, String tipoServico, LocalDate dia, LocalTime horario) throws Exception {
++        Optional<Animal> animalOpt = animalRepository.findById(animalId);
++        if (animalOpt.isEmpty()) {
++            throw new IllegalArgumentException("Animal não encontrado.");
++        }
++        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(emailAdotante);
++        if (usuarioOpt.isEmpty()) {
++            throw new IllegalArgumentException("Usuário não encontrado.");
++        }
++
++        Animal animal = animalOpt.get();
++        Usuario adotante = usuarioOpt.get();
++
++        Apadrinhamento ap = new Apadrinhamento(animal, adotante, tipoServico, dia, horario, "SOLICITADO", LocalDateTime.now());
++        Apadrinhamento salvo = apadrinhamentoRepository.save(ap);
++
++        // RN009: Criar agenda do animal ao receber proposta de prestação de serviço
++        AgendaAnimal agenda = new AgendaAnimal(animal, dia, horario, "Prestação de Serviço: " + tipoServico);
++        agendaAnimalRepository.save(agenda);
++
++        return salvo;
++    }
++
++    public DoacaoFinanceira gerarBoletoDoacao(String nome, String email, Double valor, String frequencia, String emailLogado) {
++        String nomeFinal = nome;
++        String emailFinal = email;
++        if (emailLogado != null && !emailLogado.isEmpty()) {
++            Optional<Usuario> uOpt = usuarioRepository.findByEmail(emailLogado);
++            if (uOpt.isPresent()) {
++                nomeFinal = uOpt.get().getNome();
++                emailFinal = uOpt.get().getEmail();
++            }
++        }
++
++        String codigoBoleto = "BOLETO-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
++        DoacaoFinanceira doacao = new DoacaoFinanceira(nomeFinal, emailFinal, valor, frequencia, codigoBoleto, LocalDateTime.now());
++        return doacaoFinanceiraRepository.save(doacao);
++    }
++
++    public List<AgendaAnimal> listarAgendaAnimal(Long animalId) {
++        Optional<Animal> animalOpt = animalRepository.findById(animalId);
++        if (animalOpt.isPresent()) {
++            return agendaAnimalRepository.findByAnimal(animalOpt.get());
++        }
++        return List.of();
++    }
++}
+diff --git a/src/main/resources/templates/apadrinhamento/animal.html b/src/main/resources/templates/apadrinhamento/animal.html
+new file mode 100644
+index 0000000..f8ed79d
+--- /dev/null
++++ b/src/main/resources/templates/apadrinhamento/animal.html
+@@ -0,0 +1,44 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Apadrinhamento de Animal [PRT-24 / PRT-25]</title>
++</head>
++<body>
++    <h2>DogTech - Apadrinhamento de Animal: <span th:text="${animal.nomeReferencia}"></span> [PRT-24 / PRT-25] (UC008 / RF012 / RN009)</h2>
++    <p><a th:href="@{'/animais/perfil/' + ${animal.id}}">Voltar ao Perfil</a> | <a href="/adote-aqui">Adote Aqui</a></p>
++
++    <div th:if="${erro}" style="color: red;"><p th:text="${erro}"></p></div>
++    <div th:if="${sucesso}" style="color: green;"><p th:text="${sucesso}"></p></div>
++
++    <div style="border: 1px solid #ccc; padding: 15px; margin-bottom: 15px;">
++        <h3>Opções de Apadrinhamento Financeiro [FA-16]</h3>
++        <p><a href="/apadrinhamento/financeiro"><button>Doar / Gerar Boleto (Pontual ou Mensal)</button></a></p>
++    </div>
++
++    <div style="border: 1px solid #ccc; padding: 15px;">
++        <h3>Apadrinhamento por Prestação de Serviço / Apoio [PRT-25]</h3>
++        <form action="/apadrinhamento/animal" method="post">
++            <input type="hidden" name="animalId" th:value="${animal.id}">
++            
++            <label>Tipo de Serviço / Apoio: <span title="Ex: Consulta clínica, Ração, Fisioterapia, Passeio">?</span></label>
++            <select name="tipoServico" required>
++                <option value="Consulta clínica">Consulta clínica</option>
++                <option value="Fisioterapia">Fisioterapia</option>
++                <option value="Acupuntura">Acupuntura</option>
++                <option value="Ração">Ração</option>
++                <option value="Passeios">Passeios</option>
++                <option value="Construção de baias">Construção de baias</option>
++            </select><br><br>
++
++            <label>Dia Disponível:</label>
++            <input type="date" name="dia" required><br><br>
++
++            <label>Horário Disponível:</label>
++            <input type="time" name="horario" required><br><br>
++
++            <button type="submit">Adicionar Horário e Enviar Pedido [PRT-25]</button>
++        </form>
++    </div>
++</body>
++</html>
+diff --git a/src/main/resources/templates/apadrinhamento/boleto.html b/src/main/resources/templates/apadrinhamento/boleto.html
+new file mode 100644
+index 0000000..4dbea9c
+--- /dev/null
++++ b/src/main/resources/templates/apadrinhamento/boleto.html
+@@ -0,0 +1,23 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Simulação de Boleto [PRT-29]</title>
++</head>
++<body>
++    <h2>DogTech - Simulação de Boleto Bancário [PRT-29] (UC008 / FA-16)</h2>
++    <div th:if="${sucesso}" style="color: green;"><p th:text="${sucesso}"></p></div>
++
++    <div style="border: 2px dashed #333; padding: 20px; width: 400px;">
++        <h3>BANCO DOGTECH S/A</h3>
++        <p><strong>Doador / Apadrinhador:</strong> <span th:text="${doacao.nome}"></span></p>
++        <p><strong>E-mail:</strong> <span th:text="${doacao.email}"></span></p>
++        <p><strong>Valor:</strong> R$ <span th:text="${doacao.valor}"></span></p>
++        <p><strong>Frequência:</strong> <span th:text="${doacao.frequencia}"></span></p>
++        <p><strong>Código de Barras Simulado:</strong></p>
++        <p style="font-family: monospace; font-size: 16px; background: #eee; padding: 5px;" th:text="${doacao.codigoBoleto}"></p>
++    </div>
++    <br>
++    <p><a href="/"><button>Voltar à Página Inicial</button></a></p>
++</body>
++</html>
+diff --git a/src/main/resources/templates/apadrinhamento/financeiro.html b/src/main/resources/templates/apadrinhamento/financeiro.html
+new file mode 100644
+index 0000000..87b3b97
+--- /dev/null
++++ b/src/main/resources/templates/apadrinhamento/financeiro.html
+@@ -0,0 +1,31 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Doação / Apadrinhamento Financeiro [PRT-29]</title>
++</head>
++<body>
++    <h2>DogTech - Apadrinhamento Financeiro / Doação [PRT-29] (UC008 / FA-16)</h2>
++    <p><a href="/">Página Inicial</a></p>
++
++    <form action="/apadrinhamento/financeiro" method="post">
++        <div th:if="${!autenticado}">
++            <label>Nome Completo:</label>
++            <input type="text" name="nome" required><br><br>
++            <label>E-mail:</label>
++            <input type="text" name="email" required><br><br>
++        </div>
++
++        <label>Valor da Doação (R$): <span title="Insira o valor em Reais">?</span></label>
++        <input type="number" step="0.01" name="valor" required><br><br>
++
++        <label>Frequência: <span title="Pontual ou Mensal (para envio de boletos)">?</span></label>
++        <select name="frequencia" required>
++            <option value="PONTUAL">Pontual (Doação Única)</option>
++            <option value="MENSAL">Mensal (Gera boleto mensal e incrementa orçamento)</option>
++        </select><br><br>
++
++        <button type="submit">Gerar Boleto [PRT-29 / FA-16]</button>
++    </form>
++</body>
++</html>
+diff --git a/src/test/java/com/tcc/iterativa/service/ApadrinhamentoServiceI9Test.java b/src/test/java/com/tcc/iterativa/service/ApadrinhamentoServiceI9Test.java
+new file mode 100644
+index 0000000..96ab1d9
+--- /dev/null
++++ b/src/test/java/com/tcc/iterativa/service/ApadrinhamentoServiceI9Test.java
+@@ -0,0 +1,95 @@
++package com.tcc.iterativa.service;
++
++import com.tcc.iterativa.model.*;
++import com.tcc.iterativa.repository.*;
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.context.SpringBootTest;
++import org.springframework.transaction.annotation.Transactional;
++
++import java.time.LocalDate;
++import java.time.LocalTime;
++import java.util.List;
++
++import static org.junit.jupiter.api.Assertions.*;
++
++@SpringBootTest
++@Transactional
++class ApadrinhamentoServiceI9Test {
++
++    @Autowired
++    private ApadrinhamentoService apadrinhamentoService;
++
++    @Autowired
++    private AnimalService animalService;
++
++    @Autowired
++    private UsuarioService usuarioService;
++
++    @Autowired
++    private AnimalRepository animalRepository;
++
++    @Autowired
++    private UsuarioRepository usuarioRepository;
++
++    @Autowired
++    private ApadrinhamentoRepository apadrinhamentoRepository;
++
++    @Autowired
++    private AgendaAnimalRepository agendaAnimalRepository;
++
++    @Autowired
++    private DoacaoFinanceiraRepository doacaoFinanceiraRepository;
++
++    @BeforeEach
++    void setUp() {
++        apadrinhamentoRepository.deleteAll();
++        agendaAnimalRepository.deleteAll();
++        doacaoFinanceiraRepository.deleteAll();
++        animalRepository.deleteAll();
++        usuarioRepository.deleteAll();
++    }
++
++    @Test
++    void testApadrinhamentoServicoECriacaoAgendaRN009() throws Exception {
++        Animal animal = animalService.cadastrar(
++            "Canina", "Macho", "Sim", "Sim", "2 anos", "Labrador",
++            "Dócil", "Médio", null, "Bob", "História",
++            "Não", "Não", "Sim", null, null, null, "João", null
++        );
++
++        Usuario adotante = usuarioService.cadastrar(
++            "adotante9@dogtech.com", "senha1234", "ADOTANTE",
++            "Adotante I9", "12345678901", LocalDate.of(1990,1,1),
++            "32999999999", "Rua A", "1", null, "Bairro", "JF", "MG", "36050000", null, "Não"
++        );
++
++        LocalDate dia = LocalDate.now().plusDays(1);
++        LocalTime horario = LocalTime.of(14, 0);
++
++        Apadrinhamento ap = apadrinhamentoService.criarApadrinhamentoServico(
++            animal.getId(), adotante.getEmail(), "Fisioterapia", dia, horario
++        );
++
++        assertNotNull(ap.getId());
++        assertEquals("Fisioterapia", ap.getTipoServico());
++
++        // RN009: Verificar se a agenda do animal foi criada automaticamente
++        List<AgendaAnimal> agenda = apadrinhamentoService.listarAgendaAnimal(animal.getId());
++        assertEquals(1, agenda.size());
++        assertEquals("Prestação de Serviço: Fisioterapia", agenda.get(0).getDescricao());
++    }
++
++    @Test
++    void testGerarBoletoDoacaoFinanceira() {
++        DoacaoFinanceira doacao = apadrinhamentoService.gerarBoletoDoacao(
++            "Visitante Teste", "visitante@dogtech.com", 100.0, "MENSAL", null
++        );
++
++        assertNotNull(doacao.getId());
++        assertNotNull(doacao.getCodigoBoleto());
++        assertEquals(100.0, doacao.getValor());
++        assertEquals("MENSAL", doacao.getFrequencia());
++    }
++}

@@ -1,0 +1,5 @@
+classe,metodo,situacao,tempo_s,mensagem_erro
+com.tcc.iterativa.GeracaoIterativaApplicationTests,contextLoads,Aprovado,0.477,
+com.tcc.iterativa.service.UsuarioServiceTest,testCadastroESucessoAutenticacao,Aprovado,0.459,
+com.tcc.iterativa.service.UsuarioServiceTest,testCadastroFalhaFormatoEmail,Aprovado,0.013,
+com.tcc.iterativa.service.UsuarioServiceTest,testRecuperacaoSenha,Aprovado,0.066,

@@ -1,0 +1,27 @@
+V3 = I3 (Cadastro e gerenciamento de animais, UC003/RF002/RF008/RF014/RN003/RNF004/RNF006).
+
+RESUMO: 3 chamadas à API.
+- Tentativa 1: aplicou de primeira, compilou, 11/11 testes JUnit passaram.
+- Teste manual (HTTP): ADOTANTE conseguia cadastrar animal (RF002 exige restrição
+  a Gestor/Diretor). Não capturado por nenhum teste do Gemini.
+- Tentativa 2 (correção): restringiu /animais/** a ROLE_ADMIN.
+- Teste manual: RF008 (Manter baias) nunca tinha sido implementado como entidade
+  própria — "baia" era só um campo de texto livre no Animal, sem CRUD, sem
+  validação de nome obrigatório.
+- Tentativa 3 (correção): implementou Baia como entidade própria (id, nome
+  obrigatório, identificador opcional) com repository e controller.
+
+REGRESSÃO: login (I1) e busca de CEP (I2) continuam funcionando.
+
+RESULTADOS DOS CASOS DE TESTE:
+- CT012, CT013, CT015, CT016, CT017, CT018: Aprovado.
+- CT014: REPROVADO — campo obrigatório ausente retorna erro genérico do Spring
+  (HTTP 400, JSON técnico), não uma mensagem amigável indicando o campo pendente.
+  Gap de UX de validação, não de corretude ou segurança; não corrigido nesta
+  versão para manter o ritmo dos incrementos restantes (política adotada a partir
+  de V3: bugs de corretude/segurança são corrigidos via nova chamada; gaps de
+  profundidade/UX são documentados como achado).
+- CT018 tem uma ressalva menor: a miniatura da foto da raça ao selecionar não foi
+  implementada (só a lista de nomes muda por espécie).
+
+Taxa de aprovação (TA) de V3 (CTs de V3): 6 aprovados / 7 executados = 85,7%.

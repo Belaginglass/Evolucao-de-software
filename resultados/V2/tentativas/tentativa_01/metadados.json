@@ -1,0 +1,30 @@
+{
+  "id_execucao": "I2-t01-efbbccf6",
+  "incremento": "I2",
+  "versao_anterior": "V1",
+  "versao_resultante": "V2",
+  "tentativa": 1,
+  "tipo": "geracao",
+  "modelo": "gemini-3.5-flash-lite",
+  "parametros": {
+    "temperature": 0.0,
+    "top_p": null,
+    "top_k": null,
+    "nota_parametros": "top_p/top_k não fixados explicitamente: com temperature=0 a amostragem é determinística (greedy), tornando-os irrelevantes para o resultado; não estimados nem inventados."
+  },
+  "formato_resposta": "json (caminho+conteúdo completo) — não unified diff (ver docstring do script para o motivo da mudança)",
+  "data_hora_inicio": "2026-11-06T01:49:36.677318+00:00",
+  "commit_base": "1ec67007782d06d2a6eb34c83e56cfa9ccebae05",
+  "data_hora_fim": "2026-11-06T01:50:04.616140+00:00",
+  "tempo_resposta_segundos": 27.938,
+  "sucesso_chamada": true,
+  "finish_reason": "STOP",
+  "tokens_entrada": 13785,
+  "tokens_saida": 12644,
+  "tokens_total": 26429,
+  "erros": [
+    "JSON inválido: Expecting ',' delimiter: line 6 column 113 (char 231)"
+  ],
+  "json_extraido": false,
+  "alteracoes_aplicadas": false
+}

@@ -1,0 +1,29 @@
+INCREMENTO I4 — Página inicial e apresentação dos animais
+
+Implemente o caso de uso UC009 (Manter página inicial), descrito em detalhe no
+bloco "REQUISITOS DO INCREMENTO I4" desta mesma solicitação, e nenhuma outra
+funcionalidade. Não implemente pesquisa/listagem de animais para adoção, adoção,
+apadrinhamento ou qualquer outra coisa — isso é de incrementos futuros.
+
+O Diretor Geral (use o papel "ADMIN" já existente — o sistema de papéis mais
+granular só chega no Incremento I5) deve poder manter: o texto "sobre nós", a
+lista de serviços oferecidos, as campanhas, e os valores sugeridos para doação,
+todos exibidos na página inicial pública.
+
+Lembre-se (Apêndice C / RN010): a página inicial deve escolher aleatoriamente
+quais serviços, campanhas, valores de doação e animais exibir a cada
+carregamento (quando houver mais itens cadastrados do que o espaço de exibição).
+Não é necessário ter animais disponíveis ainda para isso funcionar — apenas
+implemente a lógica de seleção aleatória para os itens que já existem (serviços,
+campanhas, doações); a parte de animais na home pode ficar vazia/placeholder por
+ora, já que a pesquisa de animais só é implementada no Incremento I6.
+
+Evite os bugs já encontrados nos incrementos anteriores:
+- Não use @Lob/BLOB para nenhum campo de imagem ou arquivo — SQLite não suporta.
+- Rotas públicas (visualização da home) não exigem login; rotas de edição (ex.:
+  POST /home/sobre-nos, /home/servicos, /home/campanhas, /home/doacoes) devem
+  exigir papel ADMIN. Ao adicionar uma rota pública nova, inclua-a no permitAll
+  de SecurityConfig — ao adicionar uma rota administrativa, NÃO a inclua lá, e
+  garanta que ela exija autenticação com papel ADMIN (o padrão anyRequest().
+  authenticated() já cobre "exige login"; adicione hasRole('ADMIN') onde for
+  especificamente administrativo).

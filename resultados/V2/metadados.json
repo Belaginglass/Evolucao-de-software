@@ -1,0 +1,48 @@
+{
+  "id_execucao": "I2-t06-f6f5ee2d",
+  "incremento": "I2",
+  "versao_anterior": "V1",
+  "versao_resultante": "V2",
+  "tentativa": 6,
+  "tipo": "correcao",
+  "modelo": "gemini-3.5-flash-lite",
+  "parametros": {
+    "temperature": 0.0,
+    "top_p": null,
+    "top_k": null,
+    "nota_parametros": "top_p/top_k não fixados explicitamente: com temperature=0 a amostragem é determinística (greedy), tornando-os irrelevantes para o resultado; não estimados nem inventados."
+  },
+  "formato_resposta": "json (caminho+conteúdo completo) — não unified diff (ver docstring do script para o motivo da mudança)",
+  "data_hora_inicio": "2026-11-06T02:09:09.984450+00:00",
+  "commit_base": "1ec67007782d06d2a6eb34c83e56cfa9ccebae05",
+  "data_hora_fim": "2026-11-06T02:09:12.580616+00:00",
+  "tempo_resposta_segundos": 2.594,
+  "sucesso_chamada": true,
+  "finish_reason": "STOP",
+  "tokens_entrada": 14965,
+  "tokens_saida": 431,
+  "tokens_total": 15396,
+  "erros": [],
+  "json_extraido": true,
+  "arquivos_na_resposta": [
+    {
+      "caminho": "src/main/java/com/tcc/iterativa/config/SecurityConfig.java",
+      "acao": "modificar"
+    }
+  ],
+  "alteracoes_aplicadas": true,
+  "arquivos_alterados": [
+    "Criado\tsrc/main/java/com/tcc/iterativa/config/CepUtils.java",
+    "Modificado\tsrc/main/java/com/tcc/iterativa/config/SecurityConfig.java",
+    "Modificado\tsrc/main/java/com/tcc/iterativa/controller/AuthController.java",
+    "Criado\tsrc/main/java/com/tcc/iterativa/controller/UsuarioController.java",
+    "Modificado\tsrc/main/java/com/tcc/iterativa/model/Usuario.java",
+    "Modificado\tsrc/main/java/com/tcc/iterativa/service/UsuarioService.java",
+    "Criado\tsrc/main/resources/templates/auth/cadastro.html",
+    "Modificado\tsrc/main/resources/templates/auth/login.html",
+    "Criado\tsrc/main/resources/templates/auth/meus-dados.html",
+    "Modificado\tsrc/main/resources/templates/home/admin.html",
+    "Modificado\tsrc/main/resources/templates/home/adotante.html",
+    "Criado\tsrc/test/java/com/tcc/iterativa/service/UsuarioServiceI2Test.java"
+  ]
+}

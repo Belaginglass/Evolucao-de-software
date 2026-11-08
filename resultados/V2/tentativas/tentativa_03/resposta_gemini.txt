@@ -1,0 +1,20 @@
+```json
+{
+  "arquivos": [
+    {
+      "caminho": "src/test/java/com/tcc/iterativa/service/UsuarioServiceI2Test.java",
+      "acao": "modificar",
+      "conteudo": "package com.tcc.iterativa.service;\n\nimport com.tcc.iterativa.model.Usuario;\nimport com.tcc.iterativa.repository.UsuarioRepository;\nimport org.junit.jupiter.api.BeforeEach;\nimport org.junit.jupiter.api.Test;\nimport org.springframework.beans.factory.annotation.Autowired;\nimport org.springframework.boot.test.context.SpringBootTest;\n\nimport java.time.LocalDate;\nimport java.util.Map;\nimport java.util.Optional;\n\nimport static org.junit.jupiter.api.Assertions.*;\n\n@SpringBootTest\nclass UsuarioServiceI2Test {\n\n    @Autowired\n    private UsuarioService usuarioService;\n\n    @Autowired\n    private UsuarioRepository usuarioRepository;\n\n    @BeforeEach\n    void setUp() {\n        usuarioRepository.deleteAll();\n    }\n\n    @Test\n    void testCadastroCompletoSucesso() throws Exception {\n        byte[] fotoMock = new byte[]{1, 2, 3, 4};\n        Usuario u = usuarioService.cadastrar(\n            \"novo@dogtech.com\", \"senha1234\", \"ADOTANTE\",\n            \"João Silva\", \"12345678901\", LocalDate.of(1990, 5, 10),\n            \"(32)98888-8888 - WhatsApp\", \"Rua Américo Lobo\", \"100\",\n            \"Apto 101\", \"Bairu\", \"Juiz de Fora\", \"MG\", \"36050000\",\n            fotoMock, \"Sim\"\n        );\n        assertNotNull(u.getId());\n        assertEquals(\"João Silva\", u.getNome());\n        assertEquals(\"Juiz de Fora\", u.getCidade());\n    }\n\n    @Test\n    void testCadastroFalhaSemTelefone() {\n        byte[] fotoMock = new byte[]{1, 2, 3};\n        assertThrows(IllegalArgumentException.class, () -> {\n            usuarioService.cadastrar(\n                \"nota@dogtech.com\", \"senha1234\", \"ADOTANTE\",\n                \"Maria\", \"98765432109\", LocalDate.of(1995, 1, 1),\n                \"\", \"Rua X\", \"10\", \"\", \"Bairro Y\", \"Cidade Z\", \"MG\", \"36050000\",\n                fotoMock, \"Não\"\n            );\n        });\n    }\n\n    @Test\n    void testBuscaCepLocal() {\n        Map<String, String> endereco = usuarioService.consultarCep(\"36050000\");\n        assertNotNull(endereco);\n        assertEquals(\"Rua Américo Lobo\", endereco.get(\"rua\"));\n        assertEquals(\"Juiz de Fora\", endereco.get(\"cidade\"));\n    }\n\n    @Test\n    void testAtualizarDadosPessoais() throws Exception {\n        usuarioService.cadastrar(\n            \"atualiza@dogtech.com\", \"senha1234\", \"ADOTANTE\",\n            \"Carlos\", \"11122233344\", LocalDate.of(1985, 2, 2),\n            \"(32)97777-7777\", \"Rua Antiga\", \"1\", \"\", \"Bairro A\", \"JF\", \"MG\", \"36050000\",\n            null, \"Sim\"\n        );\n\n        String token = usuarioService.atualizarDadosPessoais(\n            \"atualiza@dogtech.com\", \"Carlos Silva\", \"11122233344\", LocalDate.of(1985, 2, 2),\n            \"(32)97777-7777\", \"Rua Nova\", \"2\", \"\", \"Bairro A\", \"JF\", \"MG\", \"36050000\",\n            null, \"Não\", \"novasenha123\"\n        );\n\n        assertNotNull(token);\n        Optional<Usuario> uOpt = usuarioService.autenticar(\"atualiza@dogtech.com\", \"novasenha123\");\n        assertTrue(uOpt.isPresent());\n        assertEquals(\"Carlos Silva\", uOpt.get().getNome());\n    }\n}\n"
+    }
+  ]
+}
+```
+
+(a) Arquivos modificados:
+- `src/test/java/com/tcc/iterativa/service/UsuarioServiceI2Test.java`
+
+(b) Identificadores de requisitos atendidos:
+- Correção de erro de compilação por falta do import `java.util.Optional` na classe de teste `UsuarioServiceI2Test`.
+
+(c) Suposições feitas:
+- Nenhuma suposição adicional; apenas a adição da diretiva `import java.util.Optional;` necessária para resolver o símbolo não encontrado.

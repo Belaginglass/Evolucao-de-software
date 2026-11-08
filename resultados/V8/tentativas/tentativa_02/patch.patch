@@ -1,0 +1,735 @@
+diff --git a/src/main/java/com/tcc/iterativa/config/SecurityConfig.java b/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+index d5e8a80..9d4eed8 100644
+--- a/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
++++ b/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+@@ -15,8 +15,8 @@ public class SecurityConfig {
+         http
+             .csrf(csrf -> csrf.disable())
+             .authorizeHttpRequests(auth -> auth
+-                .requestMatchers("/", "/login", "/cadastro", "/recuperar-senha", "/atualizar-senha", "/buscar-cep", "/h2-console/**", "/adote-aqui", "/animais/perfil/**").permitAll()
+-                .requestMatchers("/usuarios/gerenciar", "/usuarios/privilegios", "/usuarios/excluir", "/adocoes/fila", "/adocoes/avaliar", "/adocoes/aprovar", "/adocoes/reprovar", "/adocoes/reprovar-todos", "/adocoes/manual").hasAnyRole("DIRETOR_GERAL", "GESTOR_ADOCAO")
++                .requestMatchers("/", "/login", "/cadastro", "/recuperar-senha", "/atualizar-senha", "/buscar-cep", "/h2-console/**", "/adote-aqui", "/animais/perfil/**", "/adotados").permitAll()
++                .requestMatchers("/usuarios/gerenciar", "/usuarios/privilegios", "/usuarios/excluir", "/adocoes/fila", "/adocoes/avaliar", "/adocoes/aprovar", "/adocoes/reprovar", "/adocoes/reprovar-todos", "/adocoes/manual", "/adocoes/pos-adocao/gestor/**").hasAnyRole("DIRETOR_GERAL", "GESTOR_ADOCAO")
+                 .requestMatchers("/animais/**", "/baias/**", "/home/sobre-nos", "/home/servicos/**", "/home/campanhas/**", "/home/doacoes/**").hasAnyRole("DIRETOR_GERAL", "GESTOR_ADOCAO")
+                 .anyRequest().authenticated()
+             )
+diff --git a/src/main/java/com/tcc/iterativa/controller/AdocaoController.java b/src/main/java/com/tcc/iterativa/controller/AdocaoController.java
+index 83f40da..f824c47 100644
+--- a/src/main/java/com/tcc/iterativa/controller/AdocaoController.java
++++ b/src/main/java/com/tcc/iterativa/controller/AdocaoController.java
+@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
+ import org.springframework.web.multipart.MultipartFile;
+ 
+ import java.time.LocalDate;
++import java.util.Base64;
+ import java.util.Optional;
+ 
+ @Controller
+@@ -87,9 +88,7 @@ public class AdocaoController {
+ 
+     @GetMapping("/adocoes/fila")
+     public String filaAdocoes(Authentication authentication, Model model) {
+-        if (authentication == null) {
+-            return "redirect:/login";
+-        }
++        if (authentication == null) return "redirect:/login";
+         model.addAttribute("adocoes", adocaoService.listarFilaAdocao(authentication.getName()));
+         return "adocao/fila";
+     }
+@@ -111,6 +110,16 @@ public class AdocaoController {
+         return "adocao/fila";
+     }
+ 
++    @PostMapping("/adocoes/marcar-adotado")
++    public String marcarComoAdotado(
++            @RequestParam Long adocaoId,
++            Authentication authentication,
++            Model model) {
++        if (authentication == null) return "redirect:/login";
++        adocaoService.marcarComoAdotado(adocaoId);
++        return "redirect:/adocoes/pos-adocao/gestor";
++    }
++
+     @PostMapping("/adocoes/reprovar")
+     public String reprovarAdocao(
+             @RequestParam Long adocaoId,
+@@ -184,4 +193,71 @@ public class AdocaoController {
+         model.addAttribute("animais", adocaoService.listarAnimaisDisponiveisParaAdocao());
+         return "adocao/cadastro-manual";
+     }
++
++    @GetMapping("/adocoes/pos-adocao/gestor")
++    public String posAdocaoGestor(Authentication authentication, Model model) {
++        if (authentication == null) return "redirect:/login";
++        model.addAttribute("adocoes", adocaoService.listarAdocoesParaPosAdocao());
++        model.addAttribute("relatosPendentes", adocaoService.listarRelatosPendentes());
++        return "adocao/pos-adocao-gestor";
++    }
++
++    @PostMapping("/adocoes/pos-adocao/pedir-feedback")
++    public String pedirFeedback(@RequestParam Long adocaoId, @RequestParam String mensagem) {
++        adocaoService.pedirFeedback(adocaoId, mensagem);
++        return "redirect:/adocoes/pos-adocao/gestor";
++    }
++
++    @PostMapping("/adocoes/pos-adocao/enviar-feedback-adotante")
++    public String enviarFeedbackAdotante(
++            @RequestParam Long adocaoId,
++            @RequestParam String resposta,
++            @RequestParam(required = false) MultipartFile fotoRelato,
++            Authentication authentication) throws Exception {
++        if (authentication == null) return "redirect:/login";
++        String fotoBase64 = (fotoRelato != null && !fotoRelato.isEmpty()) ? Base64.getEncoder().encodeToString(fotoRelato.getBytes()) : null;
++        adocaoService.enviarFeedbackAdotante(adocaoId, resposta, fotoBase64);
++        return "redirect:/adocoes/minhas";
++    }
++
++    @PostMapping("/adocoes/pos-adocao/avaliar-gestor")
++    public String avaliarGestor(
++            @RequestParam Long adocaoId,
++            @RequestParam int estrelas,
++            @RequestParam(required = false) String necessitaAcompanhamento,
++            @RequestParam(required = false) String revogar,
++            @RequestParam String respostaGestor,
++            @RequestParam(required = false) String novoEstado) {
++        boolean precisa = "on".equals(necessitaAcompanhamento) || "true".equals(necessitaAcompanhamento);
++        boolean rev = "on".equals(revogar) || "true".equals(revogar);
++        adocaoService.avaliarFeedbackGestor(adocaoId, estrelas, precisa, rev, respostaGestor, novoEstado);
++        return "redirect:/adocoes/pos-adocao/gestor";
++    }
++
++    @PostMapping("/adocoes/pos-adocao/enviar-relato")
++    public String enviarRelato(
++            @RequestParam Long adocaoId,
++            @RequestParam String relato,
++            @RequestParam(required = false) MultipartFile fotoRelato,
++            Authentication authentication) throws Exception {
++        if (authentication == null) return "redirect:/login";
++        String fotoBase64 = (fotoRelato != null && !fotoRelato.isEmpty()) ? Base64.getEncoder().encodeToString(fotoRelato.getBytes()) : null;
++        adocaoService.enviarRelatoAdotante(adocaoId, relato, fotoBase64);
++        return "redirect:/adocoes/minhas";
++    }
++
++    @PostMapping("/adocoes/pos-adocao/aprovar-relato")
++    public String aprovarRelato(
++            @RequestParam Long adocaoId,
++            @RequestParam boolean aprovar,
++            @RequestParam(required = false) String motivoRemocao) {
++        adocaoService.aprovarRelato(adocaoId, aprovar, motivoRemocao);
++        return "redirect:/adocoes/pos-adocao/gestor";
++    }
++
++    @GetMapping("/adotados")
++    public String paginaAdotadosPublica(Model model) {
++        model.addAttribute("relatos", adocaoService.listarRelatosAprovadosPublicos());
++        return "adocao/adotados-publicos";
++    }
+ }
+diff --git a/src/main/java/com/tcc/iterativa/model/Adocao.java b/src/main/java/com/tcc/iterativa/model/Adocao.java
+index 0468907..dcc7439 100644
+--- a/src/main/java/com/tcc/iterativa/model/Adocao.java
++++ b/src/main/java/com/tcc/iterativa/model/Adocao.java
+@@ -25,6 +25,27 @@ public class Adocao {
+     @Column(nullable = false)
+     private LocalDateTime dataPedido;
+ 
++    private LocalDateTime dataAdocaoEfetiva;
++
++    @Column(columnDefinition = "TEXT")
++    private String mensagemFeedbackGestor;
++
++    @Column(columnDefinition = "TEXT")
++    private String respostaFeedbackAdotante;
++
++    @Column(columnDefinition = "TEXT")
++    private String fotoRelato;
++
++    private Integer estrelasAvaliacao;
++
++    @Column(columnDefinition = "TEXT")
++    private String relatoAdotante;
++
++    private Boolean relatoAprovado; // null = pendente, true = aprovado, false = removido
++
++    @Column(columnDefinition = "TEXT")
++    private String motivoRemocaoRelato;
++
+     public Adocao() {}
+ 
+     public Adocao(Animal animal, Usuario adotante, String estado, LocalDateTime dataPedido) {
+@@ -48,4 +69,28 @@ public class Adocao {
+ 
+     public LocalDateTime getDataPedido() { return dataPedido; }
+     public void setDataPedido(LocalDateTime dataPedido) { this.dataPedido = dataPedido; }
++
++    public LocalDateTime getDataAdocaoEfetiva() { return dataAdocaoEfetiva; }
++    public void setDataAdocaoEfetiva(LocalDateTime dataAdocaoEfetiva) { this.dataAdocaoEfetiva = dataAdocaoEfetiva; }
++
++    public String getMensagemFeedbackGestor() { return mensagemFeedbackGestor; }
++    public void setMensagemFeedbackGestor(String mensagemFeedbackGestor) { this.mensagemFeedbackGestor = mensagemFeedbackGestor; }
++
++    public String getRespostaFeedbackAdotante() { return respostaFeedbackAdotante; }
++    public void setRespostaFeedbackAdotante(String respostaFeedbackAdotante) { this.respostaFeedbackAdotante = respostaFeedbackAdotante; }
++
++    public String getFotoRelato() { return fotoRelato; }
++    public void setFotoRelato(String fotoRelato) { this.fotoRelato = fotoRelato; }
++
++    public Integer getEstrelasAvaliacao() { return estrelasAvaliacao; }
++    public void setEstrelasAvaliacao(Integer estrelasAvaliacao) { this.estrelasAvaliacao = estrelasAvaliacao; }
++
++    public String getRelatoAdotante() { return relatoAdotante; }
++    public void setRelatoAdotante(String relatoAdotante) { this.relatoAdotante = relatoAdotante; }
++
++    public Boolean getRelatoAprovado() { return relatoAprovado; }
++    public void setRelatoAprovado(Boolean relatoAprovado) { this.relatoAprovado = relatoAprovado; }
++
++    public String getMotivoRemocaoRelato() { return motivoRemocaoRelato; }
++    public void setMotivoRemocaoRelato(String motivoRemocaoRelato) { this.motivoRemocaoRelato = motivoRemocaoRelato; }
+ }
+diff --git a/src/main/java/com/tcc/iterativa/model/Usuario.java b/src/main/java/com/tcc/iterativa/model/Usuario.java
+index edc738b..f4a3a89 100644
+--- a/src/main/java/com/tcc/iterativa/model/Usuario.java
++++ b/src/main/java/com/tcc/iterativa/model/Usuario.java
+@@ -56,6 +56,8 @@ public class Usuario {
+     
+     private LocalDateTime dataUltimaAlteracao;
+ 
++    private Integer menorEstrelaAvaliacao;
++
+     public Usuario() {}
+ 
+     public Usuario(String email, String senha, String salt, String papel) {
+@@ -135,4 +137,7 @@ public class Usuario {
+ 
+     public LocalDateTime getDataUltimaAlteracao() { return dataUltimaAlteracao; }
+     public void setDataUltimaAlteracao(LocalDateTime dataUltimaAlteracao) { this.dataUltimaAlteracao = dataUltimaAlteracao; }
++
++    public Integer getMenorEstrelaAvaliacao() { return menorEstrelaAvaliacao; }
++    public void setMenorEstrelaAvaliacao(Integer menorEstrelaAvaliacao) { this.menorEstrelaAvaliacao = menorEstrelaAvaliacao; }
+ }
+diff --git a/src/main/java/com/tcc/iterativa/service/AdocaoService.java b/src/main/java/com/tcc/iterativa/service/AdocaoService.java
+index 2012198..411b239 100644
+--- a/src/main/java/com/tcc/iterativa/service/AdocaoService.java
++++ b/src/main/java/com/tcc/iterativa/service/AdocaoService.java
+@@ -61,8 +61,6 @@ public class AdocaoService {
+         }
+         Usuario adotante = usuarioOpt.get();
+ 
+-        // RN007: Gestor não pode adotar seu próprio animal / aprovar próprio pedido
+-
+         Adocao adocao = new Adocao(animal, adotante, "AGUARDANDO", LocalDateTime.now());
+         return adocaoRepository.save(adocao);
+     }
+@@ -80,7 +78,6 @@ public class AdocaoService {
+         List<Adocao> todas = adocaoRepository.findAll();
+         
+         return todas.stream().filter(a -> {
+-            // RN007: O sistema não deve listar os pedidos de adoção do próprio gestor
+             if (gestorOpt.isPresent() && a.getAdotante().getId().equals(gestorOpt.get().getId())) {
+                 return false;
+             }
+@@ -102,14 +99,24 @@ public class AdocaoService {
+         Adocao adocao = adocaoOpt.get();
+         Optional<Usuario> gestorOpt = usuarioRepository.findByEmail(emailGestor);
+         
+-        // RN007: Gestor não pode aprovar a própria solicitação
+         if (gestorOpt.isPresent() && adocao.getAdotante().getId().equals(gestorOpt.get().getId())) {
+             throw new IllegalArgumentException("RN007: Um gestor não pode aprovar sua própria solicitação de adoção.");
+         }
+ 
+         adocao.setEstado("AGUARDANDO_VISITA");
+         adocaoRepository.save(adocao);
+-        // RN015: Simular envio de e-mail com disponibilidade
++    }
++
++    public void marcarComoAdotado(Long adocaoId) {
++        Optional<Adocao> adocaoOpt = adocaoRepository.findById(adocaoId);
++        if (adocaoOpt.isPresent()) {
++            Adocao adocao = adocaoOpt.get();
++            adocao.setEstado("ADOTADO");
++            if (adocao.getDataAdocaoEfetiva() == null) {
++                adocao.setDataAdocaoEfetiva(LocalDateTime.now());
++            }
++            adocaoRepository.save(adocao);
++        }
+     }
+ 
+     public void reprovarAdocao(Long adocaoId) {
+@@ -118,7 +125,6 @@ public class AdocaoService {
+             Adocao adocao = adocaoOpt.get();
+             adocao.setEstado("REPROVADO");
+             adocaoRepository.save(adocao);
+-            // RN015: Simular envio de e-mail de reprovação
+         }
+     }
+ 
+@@ -136,7 +142,6 @@ public class AdocaoService {
+     }
+ 
+     public void cadastrarManualEClincharAdocao(Long animalId, String email, String nome, String cpf, LocalDate dataNascimento, String telefones, String rua, String numero, String complemento, String bairro, String cidade, String estado, String cep, byte[] fotoBytes, String voluntario) throws Exception {
+-        // RN014: Senha gerada automaticamente como a data de nascimento no formato dia-mês-ano (ddMMyyyy ou dd-MM-yyyy)
+         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("ddMMyyyy");
+         String senhaAutomatica = dataNascimento.format(formatter);
+ 
+@@ -144,7 +149,6 @@ public class AdocaoService {
+         novoAdotante.setSenhaProvisoriaRN014(true);
+         usuarioRepository.save(novoAdotante);
+ 
+-        // Criar pedido e já aprovar/vincular para AGUARDANDO_VISITA conforme fluxo manual
+         Optional<Animal> animalOpt = animalRepository.findById(animalId);
+         if (animalOpt.isPresent()) {
+             Animal animal = animalOpt.get();
+@@ -152,4 +156,93 @@ public class AdocaoService {
+             adocaoRepository.save(adocao);
+         }
+     }
++
++    public List<Adocao> listarAdocoesParaPosAdocao() {
++        return adocaoRepository.findAll().stream()
++            .filter(a -> "ADOTADO".equals(a.getEstado()) || "AGUARDANDO_VISITA".equals(a.getEstado()))
++            .collect(Collectors.toList());
++    }
++
++    public void pedirFeedback(Long adocaoId, String mensagem) {
++        Optional<Adocao> opt = adocaoRepository.findById(adocaoId);
++        if (opt.isPresent()) {
++            Adocao a = opt.get();
++            a.setMensagemFeedbackGestor(mensagem);
++            adocaoRepository.save(a);
++        }
++    }
++
++    public void enviarFeedbackAdotante(Long adocaoId, String resposta, String fotoBase64) {
++        Optional<Adocao> opt = adocaoRepository.findById(adocaoId);
++        if (opt.isPresent()) {
++            Adocao a = opt.get();
++            a.setRespostaFeedbackAdotante(resposta);
++            if (fotoBase64 != null && !fotoBase64.isEmpty()) {
++                a.setFotoRelato(fotoBase64);
++            }
++            adocaoRepository.save(a);
++        }
++    }
++
++    public void avaliarFeedbackGestor(Long adocaoId, int estrelas, boolean precisaAcompanhamento, boolean revogar, String respostaGestor, String novoEstado) {
++        Optional<Adocao> opt = adocaoRepository.findById(adocaoId);
++        if (opt.isPresent()) {
++            Adocao a = opt.get();
++            a.setEstrelasAvaliacao(estrelas);
++            
++            Usuario adotante = a.getAdotante();
++            if (adotante.getMenorEstrelaAvaliacao() == null || estrelas < adotante.getMenorEstrelaAvaliacao()) {
++                adotante.setMenorEstrelaAvaliacao(estrelas);
++                usuarioRepository.save(adotante);
++            }
++
++            if (revogar) {
++                a.setEstado("REVOGADO");
++            } else if (novoEstado != null && !novoEstado.isEmpty()) {
++                a.setEstado(novoEstado);
++            }
++            a.setMensagemFeedbackGestor(respostaGestor);
++            adocaoRepository.save(a);
++        }
++    }
++
++    public void enviarRelatoAdotante(Long adocaoId, String relato, String fotoBase64) {
++        Optional<Adocao> opt = adocaoRepository.findById(adocaoId);
++        if (opt.isPresent()) {
++            Adocao a = opt.get();
++            a.setRelatoAdotante(relato);
++            if (fotoBase64 != null && !fotoBase64.isEmpty()) {
++                a.setFotoRelato(fotoBase64);
++            }
++            a.setRelatoAprovado(null); // Pendente
++            adocaoRepository.save(a);
++        }
++    }
++
++    public List<Adocao> listarRelatosPendentes() {
++        return adocaoRepository.findAll().stream()
++            .filter(a -> a.getRelatoAdotante() != null && (a.getRelatoAprovado() == null || !a.getRelatoAprovado()))
++            .collect(Collectors.toList());
++    }
++
++    public List<Adocao> listarRelatosAprovadosPublicos() {
++        return adocaoRepository.findAll().stream()
++            .filter(a -> Boolean.TRUE.equals(a.getRelatoAprovado()) && a.getRelatoAdotante() != null)
++            .collect(Collectors.toList());
++    }
++
++    public void aprovarRelato(Long adocaoId, boolean aprovar, String motivoRemocao) {
++        Optional<Adocao> opt = adocaoRepository.findById(adocaoId);
++        if (opt.isPresent()) {
++            Adocao a = opt.get();
++            if (aprovar) {
++                a.setRelatoAprovado(true);
++                a.setMotivoRemocaoRelato(null);
++            } else {
++                a.setRelatoAprovado(false);
++                a.setMotivoRemocaoRelato(motivoRemocao);
++            }
++            adocaoRepository.save(adocao);
++        }
++    }
+ }
+diff --git a/src/main/resources/templates/adocao/adotados-publicos.html b/src/main/resources/templates/adocao/adotados-publicos.html
+new file mode 100644
+index 0000000..9e2393d
+--- /dev/null
++++ b/src/main/resources/templates/adocao/adotados-publicos.html
+@@ -0,0 +1,24 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Animais Adotados [PRT-42]</title>
++</head>
++<body>
++    <h2>DogTech - Relatos de Animais Adotados [PRT-42] (UC010 / RF011)</h2>
++    <p><a href="/">Página Inicial</a> | <a href="/adote-aqui">Adote Aqui</a></p>
++
++    <div th:if="${relatos.empty}">
++        <p>Nenhum relato publicado no momento.</p>
++    </div>
++
++    <div th:each="r : ${relatos}" style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
++        <h3 th:text="'Animal: ' + ${r.animal.nomeReferencia} + ' (' + ${r.animal.raca} + ')'"></h3>
++        <p><strong>Adotante:</strong> <span th:text="${r.adotante.nome}"></span></p>
++        <p><strong>Relato:</strong> <span th:text="${r.relatoAdotante}"></span></p>
++        <div th:if="${r.fotoRelato != null}">
++            <img th:src="'data:image/jpeg;base64,' + ${r.fotoRelato}" width="200"/>
++        </div>
++    </div>
++</body>
++</html>
+diff --git a/src/main/resources/templates/adocao/minhas-adocoes.html b/src/main/resources/templates/adocao/minhas-adocoes.html
+index ecc40d6..3655324 100644
+--- a/src/main/resources/templates/adocao/minhas-adocoes.html
++++ b/src/main/resources/templates/adocao/minhas-adocoes.html
+@@ -5,7 +5,7 @@
+     <title>DogTech - Minhas Adoções [PRT-17]</title>
+ </head>
+ <body>
+-    <h2>DogTech - Meus Pedidos de Adoção [PRT-17] (UC005)</h2>
++    <h2>DogTech - Meus Pedidos de Adoção [PRT-17] (UC005 / UC010)</h2>
+     <p><a href="/adote-aqui">Voltar para Adoções</a> | <a href="/">Home</a></p>
+ 
+     <table border="1">
+@@ -14,16 +14,45 @@
+                 <th>Animal</th>
+                 <th>Data do Pedido</th>
+                 <th>Estado</th>
++                <th>Feedback / Relatos [PRT-36 / PRT-39]</th>
+             </tr>
+         </thead>
+         <tbody>
+             <tr th:if="${adocoes.empty}">
+-                <td colspan="3">Você não possui pedidos de adoção registrados.</td>
++                <td colspan="4">Você não possui pedidos de adoção registrados.</td>
+             </tr>
+             <tr th:each="ad : ${adocoes}">
+                 <td th:text="${ad.animal.nomeReferencia}"></td>
+                 <td th:text="${ad.dataPedido}"></td>
+                 <td th:text="${ad.estado}"></td>
++                <td>
++                    <!-- Se gestor pediu feedback ou adotante quer enviar feedback -->
++                    <div th:if="${ad.estado == 'ADOTADO'}">
++                        <div th:if="${ad.mensagemFeedbackGestor != null}">
++                            <p style="color:blue;"><strong>Mensagem do Gestor:</strong> <span th:text="${ad.mensagemFeedbackGestor}"></span></p>
++                        </div>
++                        <form action="/adocoes/pos-adocao/enviar-feedback-adotante" method="post" enctype="multipart/form-data">
++                            <input type="hidden" name="adocaoId" th:value="${ad.id}">
++                            <label>Enviar/Responder Feedback [PRT-36]:</label><br>
++                            <textarea name="resposta" th:text="${ad.respostaFeedbackAdotante}" required></textarea><br>
++                            <label>Foto (Opcional):</label>
++                            <input type="file" name="fotoRelato" accept=".jpg,.jpeg,.png"><br>
++                            <button type="submit">Enviar Feedback</button>
++                        </form>
++                        <hr>
++                        <form action="/adocoes/pos-adocao/enviar-relato" method="post" enctype="multipart/form-data">
++                            <input type="hidden" name="adocaoId" th:value="${ad.id}">
++                            <label>Enviar Relato da Adoção [PRT-39]:</label><br>
++                            <textarea name="relato" th:text="${ad.relatoAdotante}" required></textarea><br>
++                            <label>Foto do Relato (Opcional):</label>
++                            <input type="file" name="fotoRelato" accept=".jpg,.jpeg,.png"><br>
++                            <button type="submit">Enviar Relato</button>
++                        </form>
++                        <div th:if="${ad.relatoAprovado != null}">
++                            <p>Status do Relato: <span th:text="${ad.relatoAprovado ? 'Aprovado / Público' : 'Removido pelo gestor: ' + ad.motivoRemocaoRelato}"></span></p>
++                        </div>
++                    </div>
++                </td>
+             </tr>
+         </tbody>
+     </table>
+diff --git a/src/main/resources/templates/adocao/pos-adocao-gestor.html b/src/main/resources/templates/adocao/pos-adocao-gestor.html
+new file mode 100644
+index 0000000..5dd13d9
+--- /dev/null
++++ b/src/main/resources/templates/adocao/pos-adocao-gestor.html
+@@ -0,0 +1,110 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Gestão de Pós-Adoção [PRT-40]</title>
++</head>
++<body>
++    <h2>DogTech - Pós-Adoção e Avaliação de Adotantes [PRT-40] (UC010 / RF009 / RF011)</h2>
++    <p><a href="/home-admin">Voltar</a></p>
++
++    <h3>Adoções em Andamento / Concluídas</h3>
++    <table border="1">
++        <thead>
++            <tr>
++                <th>ID</th>
++                <th>Animal</th>
++                <th>Adotante</th>
++                <th>Estado</th>
++                <th>Ações de Pós-Adoção [PRT-35 / PRT-38]</th>
++            </tr>
++        </thead>
++        <tbody>
++            <tr th:each="ad : ${adocoes}">
++                <td th:text="${ad.id}"></td>
++                <td th:text="${ad.animal.nomeReferencia}"></td>
++                <td th:text="${ad.adotante.email} + ' (' + ${ad.adotante.nome} + ')'"></td>
++                <td th:text="${ad.estado}"></td>
++                <td>
++                    <!-- Marcar como adotado se aguardando visita -->
++                    <div th:if="${ad.estado == 'AGUARDANDO_VISITA'}">
++                        <form action="/adocoes/marcar-adotado" method="post">
++                            <input type="hidden" name="adocaoId" th:value="${ad.id}">
++                            <button type="submit">Marcar como 'ADOTADO' (Inicia Pós-Adoção)</button>
++                        </form>
++                    </div>
++                    <!-- Se já for adotado -->
++                    <div th:if="${ad.estado == 'ADOTADO'}">
++                        <form action="/adocoes/pos-adocao/pedir-feedback" method="post">
++                            <input type="hidden" name="adocaoId" th:value="${ad.id}">
++                            <input type="text" name="mensagem" placeholder="Mensagem de pedido de feedback" required>
++                            <button type="submit">Pedir Feedback [PRT-35]</button>
++                        </form>
++                        <div th:if="${ad.respostaFeedbackAdotante != null}" style="background:#f9f9f9; padding:5px; margin-top:5px;">
++                            <p><strong>Resposta do Adotante:</strong> <span th:text="${ad.respostaFeedbackAdotante}"></span></p>
++                            <img th:if="${ad.fotoRelato != null}" th:src="'data:image/jpeg;base64,' + ${ad.fotoRelato}" width="100"/>
++                            
++                            <form action="/adocoes/pos-adocao/avaliar-gestor" method="post">
++                                <input type="hidden" name="adocaoId" th:value="${ad.id}">
++                                <label>Classificação (Estrelas 1-5 - RF009):</label>
++                                <select name="estrelas" required>
++                                    <option value="5">5 - Bom adotante</option>
++                                    <option value="4">4 - Adotante razoável</option>
++                                    <option value="3">3 - Devolveu com justificativa</option>
++                                    <option value="2">2 - Devolveu sem justificativa</option>
++                                    <option value="1">1 - Abandonou / Mal tratou</option>
++                                </select><br>
++                                <label><input type="checkbox" name="necessitaAcompanhamento" value="true"> Necessita de mais acompanhamento?</label><br>
++                                <label><input type="checkbox" name="revogar" value="true" style="color:red;"> Revogar Adoção?</label><br>
++                                <label>Resposta / Comentário:</label>
++                                <input type="text" name="respostaGestor" required><br>
++                                <button type="submit">Salvar Avaliação [PRT-38]</button>
++                            </form>
++                        </div>
++                    </div>
++                </td>
++            </tr>
++        </tbody>
++    </table>
++
++    <hr>
++    <h3>Relatos Pendentes de Aprovação [PRT-40]</h3>
++    <table border="1">
++        <thead>
++            <tr>
++                <th>Adotante</th>
++                <th>Animal</th>
++                <th>Relato</th>
++                <th>Foto</th>
++                <th>Ações</th>
++            </tr>
++        </thead>
++        <tbody>
++            <tr th:if="${relatosPendentes.empty}">
++                <td colspan="5">Nenhum relato pendente.</td>
++            </tr>
++            <tr th:each="r : ${relatosPendentes}">
++                <td th:text="${r.adotante.nome}"></td>
++                <td th:text="${r.animal.nomeReferencia}"></td>
++                <td th:text="${r.relatoAdotante}"></td>
++                <td>
++                    <img th:if="${r.fotoRelato != null}" th:src="'data:image/jpeg;base64,' + ${r.fotoRelato}" width="80"/>
++                </td>
++                <td>
++                    <form action="/adocoes/pos-adocao/aprovar-relato" method="post" style="display:inline;">
++                        <input type="hidden" name="adocaoId" th:value="${r.id}">
++                        <input type="hidden" name="aprovar" value="true">
++                        <button type="submit">Aprovar (Tornar Público)</button>
++                    </form>
++                    <form action="/adocoes/pos-adocao/aprovar-relato" method="post" style="display:inline; margin-left:5px;">
++                        <input type="hidden" name="adocaoId" th:value="${r.id}">
++                        <input type="hidden" name="aprovar" value="false">
++                        <input type="text" name="motivoRemocao" placeholder="Motivo da remoção" required>
++                        <button type="submit" style="color:red;">Remover / Recusar</button>
++                    </form>
++                </td>
++            </tr>
++        </tbody>
++    </table>
++</body>
++</html>
+diff --git a/src/main/resources/templates/home/admin.html b/src/main/resources/templates/home/admin.html
+index caea20c..1de429a 100644
+--- a/src/main/resources/templates/home/admin.html
++++ b/src/main/resources/templates/home/admin.html
+@@ -6,6 +6,7 @@
+     <p><a href="/">Ver Página Inicial Pública</a></p>
+     <p><a href="/adote-aqui">Ver Animais / Adoções [PRT-12]</a></p>
+     <p><a href="/adocoes/fila">Fila de Adoções [PRT-16]</a></p>
++    <p><a href="/adocoes/pos-adocao/gestor">Pós-Adoção / Avaliações [PRT-40]</a></p>
+     <p><a href="/meus-dados">Meus Dados (UC011)</a></p>
+     <p><a href="/animais/novo">Cadastrar Animal (UC003 / RF002)</a></p>
+     <p><a href="/baias">Gerenciar Baias (RF008)</a></p>
+diff --git a/src/main/resources/templates/home/adotante.html b/src/main/resources/templates/home/adotante.html
+index 494710c..102e119 100644
+--- a/src/main/resources/templates/home/adotante.html
++++ b/src/main/resources/templates/home/adotante.html
+@@ -3,7 +3,7 @@
+ <head><meta charset="UTF-8"><title>Home Adotante</title></head>
+ <body>
+     <h1>Bem-vindo à Tela Inicial do Adotante [PRT-3]</h1>
+-    <p><a href="/">Página Inicial</a> | <a href="/adote-aqui">Adote Aqui [PRT-11]</a> | <a href="/adocoes/minhas">Minhas Adoções [PRT-17]</a></p>
++    <p><a href="/">Página Inicial</a> | <a href="/adote-aqui">Adote Aqui [PRT-11]</a> | <a href="/adocoes/minhas">Minhas Adoções [PRT-17]</a> | <a href="/adotados">Animais Adotados [PRT-42]</a></p>
+     <p><a href="/meus-dados">Meus Dados (UC011)</a></p>
+     <a href="/login">Sair</a>
+ </body>
+diff --git a/src/main/resources/templates/index.html b/src/main/resources/templates/index.html
+index 8cc0814..8a2f283 100644
+--- a/src/main/resources/templates/index.html
++++ b/src/main/resources/templates/index.html
+@@ -8,7 +8,8 @@
+     <h1>DogTech - Sistema de Gerenciamento de Adoção</h1>
+     <p>
+         <a href="/login">Entrar / Cadastrar</a> |
+-        <a href="/adote-aqui">Adote Aqui [PRT-11]</a>
++        <a href="/adote-aqui">Adote Aqui [PRT-11]</a> |
++        <a href="/adotados">Adotados / Relatos [PRT-42]</a>
+     </p>
+ 
+     <hr>
+diff --git a/src/test/java/com/tcc/iterativa/service/AdocaoServiceI8Test.java b/src/test/java/com/tcc/iterativa/service/AdocaoServiceI8Test.java
+new file mode 100644
+index 0000000..bffd489
+--- /dev/null
++++ b/src/test/java/com/tcc/iterativa/service/AdocaoServiceI8Test.java
+@@ -0,0 +1,109 @@
++package com.tcc.iterativa.service;
++
++import com.tcc.iterativa.model.Adocao;
++import com.tcc.iterativa.model.Animal;
++import com.tcc.iterativa.model.Usuario;
++import com.tcc.iterativa.repository.AdocaoRepository;
++import com.tcc.iterativa.repository.AnimalRepository;
++import com.tcc.iterativa.repository.UsuarioRepository;
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.context.SpringBootTest;
++import org.springframework.transaction.annotation.Transactional;
++
++import java.time.LocalDate;
++import java.util.List;
++
++import static org.junit.jupiter.api.Assertions.*;
++
++@SpringBootTest
++@Transactional
++class AdocaoServiceI8Test {
++
++    @Autowired
++    private AdocaoService adocaoService;
++
++    @Autowired
++    private AnimalRepository animalRepository;
++
++    @Autowired
++    private UsuarioRepository usuarioRepository;
++
++    @Autowired
++    private AdocaoRepository adocaoRepository;
++
++    @Autowired
++    private AnimalService animalService;
++
++    @Autowired
++    private UsuarioService usuarioService;
++
++    @BeforeEach
++    void setUp() {
++        adocaoRepository.deleteAll();
++        animalRepository.deleteAll();
++        usuarioRepository.deleteAll();
++    }
++
++    @Test
++    void testFluxoPosAdocaoEClassificacaoEstrelasMenorNotaPrevalece() throws Exception {
++        Animal animal = animalService.cadastrar(
++            "Canina", "Macho", "Sim", "Sim", "2 anos", "Labrador",
++            "Dócil", "Médio", null, "Rex", "História",
++            "Não", "Não", "Sim", null, null, null, "João", null
++        );
++
++        Usuario adotante = usuarioService.cadastrar(
++            "adotante8@dogtech.com", "senha1234", "ADOTANTE",
++            "Adotante I8", "12345678999", LocalDate.of(1990,1,1),
++            "32999999999", "Rua A", "1", null, "Bairro", "JF", "MG", "36050000", null, "Não"
++        );
++
++        Adocao adocao = adocaoService.criarPedidoAdocao(animal.getId(), adotante.getEmail(), true);
++        adocaoService.marcarComoAdotado(adocao.getId());
++
++        assertEquals("ADOTADO", adocaoRepository.findById(adocao.getId()).get().getEstado());
++
++        // Gestor pede feedback e adotante responde
++        adocaoService.pedirFeedback(adocao.getId(), "Como está o pet?");
++        adocaoService.enviarFeedbackAdotante(adocao.getId(), "Está ótimo!", null);
++
++        // Gestor avalia com 5 estrelas
++        adocaoService.avaliarFeedbackGestor(adocao.getId(), 5, false, false, "Muito bom", "ADOTADO");
++        assertEquals(5, usuarioRepository.findById(adotante.getId()).get().getMenorEstrelaAvaliacao());
++
++        // Outra avaliação com nota menor (2 estrelas) -> menor nota deve prevalecer (RF009)
++        adocaoService.avaliarFeedbackGestor(adocao.getId(), 2, false, false, "Problemas posteriores", "ADOTADO");
++        assertEquals(2, usuarioRepository.findById(adotante.getId()).get().getMenorEstrelaAvaliacao());
++    }
++
++    @Test
++    void testRelatoAdotanteAprovacaoEPublicacao() throws Exception {
++        Animal animal = animalService.cadastrar(
++            "Canina", "Macho", "Sim", "Sim", "2 anos", "Labrador",
++            "Dócil", "Médio", null, "Mel", "História",
++            "Não", "Não", "Sim", null, null, null, "João", null
++        );
++
++        Usuario adotante = usuarioService.cadastrar(
++            "adotante_relato@dogtech.com", "senha1234", "ADOTANTE",
++            "Adotante Relato", "98765432111", LocalDate.of(1992,1,1),
++            "32988888888", "Rua B", "2", null, "Bairro", "JF", "MG", "36050000", null, "Não"
++        );
++
++        Adocao adocao = adocaoService.criarPedidoAdocao(animal.getId(), adotante.getEmail(), true);
++        adocaoService.marcarComoAdotado(adocao.getId());
++
++        adocaoService.enviarRelatoAdotante(adocao.getId(), "Ela é maravilhosa em casa!", null);
++        List<Adocao> pendentes = adocaoService.listarRelatosPendentes();
++        assertEquals(1, pendentes.size());
++
++        // Gestor aprova relato
++        adocaoService.aprovarRelato(adocao.getId(), true, null);
++
++        List<Adocao> publicos = adocaoService.listarRelatosAprovadosPublicos();
++        assertEquals(1, publicos.size());
++        assertEquals("Ela é maravilhosa em casa!", publicos.get(0).getRelatoAdotante());
++    }
++}

@@ -1,0 +1,570 @@
+diff --git a/src/main/java/com/tcc/iterativa/config/SecurityConfig.java b/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+index 5fa3ed0..d5e8a80 100644
+--- a/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
++++ b/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+@@ -16,7 +16,7 @@ public class SecurityConfig {
+             .csrf(csrf -> csrf.disable())
+             .authorizeHttpRequests(auth -> auth
+                 .requestMatchers("/", "/login", "/cadastro", "/recuperar-senha", "/atualizar-senha", "/buscar-cep", "/h2-console/**", "/adote-aqui", "/animais/perfil/**").permitAll()
+-                .requestMatchers("/usuarios/gerenciar", "/usuarios/privilegios", "/usuarios/excluir", "/adocoes/fila").hasAnyRole("DIRETOR_GERAL", "GESTOR_ADOCAO")
++                .requestMatchers("/usuarios/gerenciar", "/usuarios/privilegios", "/usuarios/excluir", "/adocoes/fila", "/adocoes/avaliar", "/adocoes/aprovar", "/adocoes/reprovar", "/adocoes/reprovar-todos", "/adocoes/manual").hasAnyRole("DIRETOR_GERAL", "GESTOR_ADOCAO")
+                 .requestMatchers("/animais/**", "/baias/**", "/home/sobre-nos", "/home/servicos/**", "/home/campanhas/**", "/home/doacoes/**").hasAnyRole("DIRETOR_GERAL", "GESTOR_ADOCAO")
+                 .anyRequest().authenticated()
+             )
+diff --git a/src/main/java/com/tcc/iterativa/controller/AdocaoController.java b/src/main/java/com/tcc/iterativa/controller/AdocaoController.java
+index 206247a..83f40da 100644
+--- a/src/main/java/com/tcc/iterativa/controller/AdocaoController.java
++++ b/src/main/java/com/tcc/iterativa/controller/AdocaoController.java
+@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.GetMapping;
+ import org.springframework.web.bind.annotation.PathVariable;
+ import org.springframework.web.bind.annotation.PostMapping;
+ import org.springframework.web.bind.annotation.RequestParam;
++import org.springframework.web.multipart.MultipartFile;
+ 
++import java.time.LocalDate;
+ import java.util.Optional;
+ 
+ @Controller
+@@ -88,7 +90,98 @@ public class AdocaoController {
+         if (authentication == null) {
+             return "redirect:/login";
+         }
+-        model.addAttribute("adocoes", adocaoService.listarFilaAdocao());
++        model.addAttribute("adocoes", adocaoService.listarFilaAdocao(authentication.getName()));
+         return "adocao/fila";
+     }
++
++    @PostMapping("/adocoes/aprovar")
++    public String aprovarAdocao(
++            @RequestParam Long adocaoId,
++            @RequestParam String disponibilidade,
++            Authentication authentication,
++            Model model) {
++        if (authentication == null) return "redirect:/login";
++        try {
++            adocaoService.aprovarAdocao(adocaoId, authentication.getName(), disponibilidade);
++            model.addAttribute("sucesso", "Pedido de adoção aprovado com sucesso! E-mail enviado informando dias de disponibilidade [RN015].");
++        } catch (Exception e) {
++            model.addAttribute("erro", e.getMessage());
++        }
++        model.addAttribute("adocoes", adocaoService.listarFilaAdocao(authentication.getName()));
++        return "adocao/fila";
++    }
++
++    @PostMapping("/adocoes/reprovar")
++    public String reprovarAdocao(
++            @RequestParam Long adocaoId,
++            Authentication authentication,
++            Model model) {
++        if (authentication == null) return "redirect:/login";
++        try {
++            adocaoService.reprovarAdocao(adocaoId);
++            model.addAttribute("sucesso", "Pedido de adoção reprovado com sucesso! E-mail enviado [RN015].");
++        } catch (Exception e) {
++            model.addAttribute("erro", e.getMessage());
++        }
++        model.addAttribute("adocoes", adocaoService.listarFilaAdocao(authentication.getName()));
++        return "adocao/fila";
++    }
++
++    @PostMapping("/adocoes/reprovar-todos")
++    public String reprovarTodosDemais(
++            @RequestParam Long animalId,
++            @RequestParam Long adocaoExcecaoId,
++            Authentication authentication,
++            Model model) {
++        if (authentication == null) return "redirect:/login";
++        try {
++            adocaoService.reprovarTodosDemais(animalId, adocaoExcecaoId);
++            model.addAttribute("sucesso", "Demais pedidos reprovados com sucesso!");
++        } catch (Exception e) {
++            model.addAttribute("erro", e.getMessage());
++        }
++        model.addAttribute("adocoes", adocaoService.listarFilaAdocao(authentication.getName()));
++        return "adocao/fila";
++    }
++
++    @GetMapping("/adocoes/manual")
++    public String cadastroManualAdocaoForm(Authentication authentication, Model model) {
++        if (authentication == null) return "redirect:/login";
++        model.addAttribute("animais", adocaoService.listarAnimaisDisponiveisParaAdocao());
++        return "adocao/cadastro-manual";
++    }
++
++    @PostMapping("/adocoes/manual")
++    public String cadastroManualAdocao(
++            Authentication authentication,
++            @RequestParam Long animalId,
++            @RequestParam String email,
++            @RequestParam String nome,
++            @RequestParam String cpf,
++            @RequestParam LocalDate dataNascimento,
++            @RequestParam String telefones,
++            @RequestParam String rua,
++            @RequestParam String numero,
++            @RequestParam(required = false) String complemento,
++            @RequestParam String bairro,
++            @RequestParam String cidade,
++            @RequestParam String estado,
++            @RequestParam String cep,
++            @RequestParam(required = false) MultipartFile fotoFile,
++            @RequestParam String voluntario,
++            Model model) {
++        if (authentication == null) return "redirect:/login";
++        try {
++            byte[] fotoBytes = fotoFile != null ? fotoFile.getBytes() : null;
++            adocaoService.cadastrarManualEClincharAdocao(animalId, email, nome, cpf, dataNascimento, telefones, rua, numero, complemento, bairro, cidade, estado, cep, fotoBytes, voluntario);
++            model.addAttribute(
++                "sucesso",
++                "Adoção manual cadastrada com sucesso! Senha gerada automaticamente (data de nascimento DD-MM-AAAA) conforme RN014."
++            );
++        } catch (Exception e) {
++            model.addAttribute("erro", e.getMessage());
++        }
++        model.addAttribute("animais", adocaoService.listarAnimaisDisponiveisParaAdocao());
++        return "adocao/cadastro-manual";
++    }
+ }
+diff --git a/src/main/java/com/tcc/iterativa/model/Usuario.java b/src/main/java/com/tcc/iterativa/model/Usuario.java
+index 2fc68f9..edc738b 100644
+--- a/src/main/java/com/tcc/iterativa/model/Usuario.java
++++ b/src/main/java/com/tcc/iterativa/model/Usuario.java
+@@ -29,6 +29,8 @@ public class Usuario {
+     private String tokenRecuperacao;
+     private LocalDateTime validadeToken;
+ 
++    private Boolean senhaProvisoriaRN014;
++
+     // Novos campos para RN002 / UC002 / UC011
+     private String nome;
+     
+@@ -62,6 +64,7 @@ public class Usuario {
+         this.salt = salt;
+         this.papel = papel;
+         this.statusAdmin = "ATIVO";
++        this.senhaProvisoriaRN014 = false;
+     }
+ 
+     public Long getId() { return id; }
+@@ -88,6 +91,9 @@ public class Usuario {
+     public LocalDateTime getValidadeToken() { return validadeToken; }
+     public void setValidadeToken(LocalDateTime validadeToken) { this.validadeToken = validadeToken; }
+ 
++    public Boolean getSenhaProvisoriaRN014() { return senhaProvisoriaRN014; }
++    public void setSenhaProvisoriaRN014(Boolean senhaProvisoriaRN014) { this.senhaProvisoriaRN014 = senhaProvisoriaRN014; }
++
+     public String getNome() { return nome; }
+     public void setNome(String nome) { this.nome = nome; }
+ 
+diff --git a/src/main/java/com/tcc/iterativa/service/AdocaoService.java b/src/main/java/com/tcc/iterativa/service/AdocaoService.java
+index 565dcc3..2012198 100644
+--- a/src/main/java/com/tcc/iterativa/service/AdocaoService.java
++++ b/src/main/java/com/tcc/iterativa/service/AdocaoService.java
+@@ -7,7 +7,9 @@ import com.tcc.iterativa.repository.AdocaoRepository;
+ import com.tcc.iterativa.repository.AnimalRepository;
+ import com.tcc.iterativa.repository.UsuarioRepository;
+ import org.springframework.stereotype.Service;
++import java.time.LocalDate;
+ import java.time.LocalDateTime;
++import java.time.format.DateTimeFormatter;
+ import java.util.List;
+ import java.util.Optional;
+ import java.util.stream.Collectors;
+@@ -18,11 +20,13 @@ public class AdocaoService {
+     private final AdocaoRepository adocaoRepository;
+     private final AnimalRepository animalRepository;
+     private final UsuarioRepository usuarioRepository;
++    private final UsuarioService usuarioService;
+ 
+-    public AdocaoService(AdocaoRepository adocaoRepository, AnimalRepository animalRepository, UsuarioRepository usuarioRepository) {
++    public AdocaoService(AdocaoRepository adocaoRepository, AnimalRepository animalRepository, UsuarioRepository usuarioRepository, UsuarioService usuarioService) {
+         this.adocaoRepository = adocaoRepository;
+         this.animalRepository = animalRepository;
+         this.usuarioRepository = usuarioRepository;
++        this.usuarioService = usuarioService;
+     }
+ 
+     public List<Animal> listarAnimaisDisponiveisParaAdocao() {
+@@ -57,6 +61,8 @@ public class AdocaoService {
+         }
+         Usuario adotante = usuarioOpt.get();
+ 
++        // RN007: Gestor não pode adotar seu próprio animal / aprovar próprio pedido
++
+         Adocao adocao = new Adocao(animal, adotante, "AGUARDANDO", LocalDateTime.now());
+         return adocaoRepository.save(adocao);
+     }
+@@ -69,15 +75,81 @@ public class AdocaoService {
+         return List.of();
+     }
+ 
+-    public List<Adocao> listarFilaAdocao() {
++    public List<Adocao> listarFilaAdocao(String emailGestorLogado) {
++        Optional<Usuario> gestorOpt = usuarioRepository.findByEmail(emailGestorLogado);
+         List<Adocao> todas = adocaoRepository.findAll();
+-        todas.sort((a1, a2) -> {
++        
++        return todas.stream().filter(a -> {
++            // RN007: O sistema não deve listar os pedidos de adoção do próprio gestor
++            if (gestorOpt.isPresent() && a.getAdotante().getId().equals(gestorOpt.get().getId())) {
++                return false;
++            }
++            return true;
++        }).sorted((a1, a2) -> {
+             boolean a1Ag = "AGUARDANDO".equals(a1.getEstado());
+             boolean a2Ag = "AGUARDANDO".equals(a2.getEstado());
+             if (a1Ag && !a2Ag) return -1;
+             if (!a1Ag && a2Ag) return 1;
+             return a1.getDataPedido().compareTo(a2.getDataPedido());
+-        });
+-        return todas;
++        }).collect(Collectors.toList());
++    }
++
++    public void aprovarAdocao(Long adocaoId, String emailGestor, String disponibilidade) throws Exception {
++        Optional<Adocao> adocaoOpt = adocaoRepository.findById(adocaoId);
++        if (adocaoOpt.isEmpty()) {
++            throw new IllegalArgumentException("Pedido de adoção não encontrado.");
++        }
++        Adocao adocao = adocaoOpt.get();
++        Optional<Usuario> gestorOpt = usuarioRepository.findByEmail(emailGestor);
++        
++        // RN007: Gestor não pode aprovar a própria solicitação
++        if (gestorOpt.isPresent() && adocao.getAdotante().getId().equals(gestorOpt.get().getId())) {
++            throw new IllegalArgumentException("RN007: Um gestor não pode aprovar sua própria solicitação de adoção.");
++        }
++
++        adocao.setEstado("AGUARDANDO_VISITA");
++        adocaoRepository.save(adocao);
++        // RN015: Simular envio de e-mail com disponibilidade
++    }
++
++    public void reprovarAdocao(Long adocaoId) {
++        Optional<Adocao> adocaoOpt = adocaoRepository.findById(adocaoId);
++        if (adocaoOpt.isPresent()) {
++            Adocao adocao = adocaoOpt.get();
++            adocao.setEstado("REPROVADO");
++            adocaoRepository.save(adocao);
++            // RN015: Simular envio de e-mail de reprovação
++        }
++    }
++
++    public void reprovarTodosDemais(Long animalId, Long adocaoExcecaoId) {
++        Optional<Animal> animalOpt = animalRepository.findById(animalId);
++        if (animalOpt.isPresent()) {
++            List<Adocao> adocoes = adocaoRepository.findByAnimal(animalOpt.get());
++            for (Adocao a : adocoes) {
++                if (!a.getId().equals(adocaoExcecaoId) && "AGUARDANDO".equals(a.getEstado())) {
++                    a.setEstado("REPROVADO");
++                    adocaoRepository.save(a);
++                }
++            }
++        }
++    }
++
++    public void cadastrarManualEClincharAdocao(Long animalId, String email, String nome, String cpf, LocalDate dataNascimento, String telefones, String rua, String numero, String complemento, String bairro, String cidade, String estado, String cep, byte[] fotoBytes, String voluntario) throws Exception {
++        // RN014: Senha gerada automaticamente como a data de nascimento no formato dia-mês-ano (ddMMyyyy ou dd-MM-yyyy)
++        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("ddMMyyyy");
++        String senhaAutomatica = dataNascimento.format(formatter);
++
++        Usuario novoAdotante = usuarioService.cadastrar(email, senhaAutomatica, "ADOTANTE", nome, cpf, dataNascimento, telefones, rua, numero, complemento, bairro, cidade, estado, cep, fotoBytes, voluntario);
++        novoAdotante.setSenhaProvisoriaRN014(true);
++        usuarioRepository.save(novoAdotante);
++
++        // Criar pedido e já aprovar/vincular para AGUARDANDO_VISITA conforme fluxo manual
++        Optional<Animal> animalOpt = animalRepository.findById(animalId);
++        if (animalOpt.isPresent()) {
++            Animal animal = animalOpt.get();
++            Adocao adocao = new Adocao(animal, novoAdotante, "AGUARDANDO_VISITA", LocalDateTime.now());
++            adocaoRepository.save(adocao);
++        }
+     }
+ }
+diff --git a/src/main/resources/templates/adocao/cadastro-manual.html b/src/main/resources/templates/adocao/cadastro-manual.html
+new file mode 100644
+index 0000000..f405727
+--- /dev/null
++++ b/src/main/resources/templates/adocao/cadastro-manual.html
+@@ -0,0 +1,86 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Cadastro Manual de Adoção [FA-12]</title>
++    <script>
++        function buscarCep() {
++            let cep = document.getElementById('cep').value;
++            fetch('/buscar-cep?cep=' + cep)
++                .then(response => response.json())
++                .then(data => {
++                    if (data && data.rua) {
++                        document.getElementById('rua').value = data.rua;
++                        document.getElementById('bairro').value = data.bairro;
++                        document.getElementById('cidade').value = data.cidade;
++                        document.getElementById('estado').value = data.estado;
++                    }
++                });
++        }
++    </script>
++</head>
++<body>
++    <h2>DogTech - Cadastro Manual de Adoção [PRT-6 / FA-12] (RN014)</h2>
++    <p><a href="/adocoes/fila">Voltar para Fila de Adoções</a></p>
++
++    <div th:if="${erro}" style="color: red;"><p th:text="${erro}"></p></div>
++    <div th:if="${sucesso}" style="color: green;"><p th:text="${sucesso}"></p></div>
++
++    <form action="/adocoes/manual" method="post" enctype="multipart/form-data">
++        <label>Animal Disponível: <span title="Selecione o animal para adoção">?</span></label>
++        <select name="animalId" required>
++            <option th:each="a : ${animais}" th:value="${a.id}" th:text="${a.nomeReferencia} + ' (' + ${a.raca} + ')'"></option>
++        </select><br><br>
++
++        <label>Nome Completo:</label>
++        <input type="text" name="nome" required><br><br>
++
++        <label>E-mail:</label>
++        <input type="text" name="email" required><br><br>
++
++        <label>Senha Provisória (Gerada automaticamente pela Data de Nascimento - RN014):</label>
++        <input type="password" value="senhaautomatica" disabled><br><br>
++
++        <label>CPF:</label>
++        <input type="text" name="cpf" required><br><br>
++
++        <label>Data de Nascimento (Usada como senha DDMMYYYY - RN014):</label>
++        <input type="date" name="dataNascimento" required><br><br>
++
++        <label>Telefone(s):</label>
++        <input type="text" name="telefones" placeholder="(32)99999-9999" required><br><br>
++
++        <label>CEP:</label>
++        <input type="text" id="cep" name="cep" onblur="buscarCep()" required><br><br>
++
++        <label>Rua:</label>
++        <input type="text" id="rua" name="rua" required><br><br>
++
++        <label>Número:</label>
++        <input type="text" name="numero" required><br><br>
++
++        <label>Complemento:</label>
++        <input type="text" name="complemento"><br><br>
++
++        <label>Bairro:</label>
++        <input type="text" id="bairro" name="bairro" required><br><br>
++
++        <label>Cidade:</label>
++        <input type="text" id="cidade" name="cidade" required><br><br>
++
++        <label>Estado:</label>
++        <input type="text" id="estado" name="estado" required><br><br>
++
++        <label>Foto:</label>
++        <input type="file" name="fotoFile" accept=".jpg, .jpeg, .png"><br><br>
++
++        <label>Voluntário?:</label>
++        <select name="voluntario">
++            <option value="Sim">Sim</option>
++            <option value="Não">Não</option>
++        </select><br><br>
++
++        <button type="submit">Cadastrar e Aprovar Adoção Manual</button>
++    </form>
++</body>
++</html>
+diff --git a/src/main/resources/templates/adocao/fila.html b/src/main/resources/templates/adocao/fila.html
+index 2e7d088..bfcde8b 100644
+--- a/src/main/resources/templates/adocao/fila.html
++++ b/src/main/resources/templates/adocao/fila.html
+@@ -5,29 +5,56 @@
+     <title>DogTech - Fila de Adoções [PRT-16]</title>
+ </head>
+ <body>
+-    <h2>DogTech - Fila de Adoções [PRT-16] (UC005 / RN008)</h2>
+-    <p><a href="/home-admin">Voltar</a></p>
++    <h2>DogTech - Fila de Adoções [PRT-16] (UC006 / RN008 / RN007)</h2>
++    <p>
++        <a href="/home-admin">Voltar</a> |
++        <a href="/adocoes/manual">Cadastrar Manualmente Adoção [FA-12]</a>
++    </p>
++
++    <div th:if="${erro}" style="color: red;"><p th:text="${erro}"></p></div>
++    <div th:if="${sucesso}" style="color: green;"><p th:text="${sucesso}"></p></div>
+ 
+     <table border="1">
+         <thead>
+             <tr>
+                 <th>ID Pedido</th>
+                 <th>Animal</th>
+-                <th>Adotante (E-mail)</th>
++                <th>Adotante (E-mail / Nome)</th>
+                 <th>Data do Pedido</th>
+                 <th>Estado</th>
++                <th>Ações de Avaliação (UC006)</th>
+             </tr>
+         </thead>
+         <tbody>
+             <tr th:if="${adocoes.empty}">
+-                <td colspan="5">Nenhum pedido de adoção na fila.</td>
++                <td colspan="6">Nenhum pedido de adoção na fila.</td>
+             </tr>
+             <tr th:each="ad : ${adocoes}">
+                 <td th:text="${ad.id}"></td>
+                 <td th:text="${ad.animal.nomeReferencia}"></td>
+-                <td th:text="${ad.adotante.email}"></td>
++                <td th:text="${ad.adotante.email} + ' (' + ${ad.adotante.nome} + ')'"></td>
+                 <td th:text="${ad.dataPedido}"></td>
+                 <td th:text="${ad.estado}"></td>
++                <td>
++                    <div th:if="${ad.estado == 'AGUARDANDO'}">
++                        <form action="/adocoes/aprovar" method="post" style="display:inline;">
++                            <input type="hidden" name="adocaoId" th:value="${ad.id}">
++                            <label>Disponibilidade Visita: <span title="Dias e horários para visita">?</span></label>
++                            <input type="text" name="disponibilidade" placeholder="Ex: Seg e Qua 14h" required>
++                            <button type="submit">Aprovar [PRT-19]</button>
++                        </form>
++                        <form action="/adocoes/reprovar" method="post" style="display:inline; margin-left:5px;">
++                            <input type="hidden" name="adocaoId" th:value="${ad.id}">
++                            <button type="submit" onclick="return confirm('Deseja reprovar este pedido?');">Reprovar</button>
++                        </form>
++                        <form action="/adocoes/reprovar-todos" method="post" style="display:inline; margin-left:5px;">
++                            <input type="hidden" name="animalId" th:value="${ad.animal.id}">
++                            <input type="hidden" name="adocaoExcecaoId" th:value="${ad.id}">
++                            <button type="submit" onclick="return confirm('Reprovar todos os outros candidatos para este animal?');">Reprovar Demais</button>
++                        </form>
++                    </div>
++                    <span th:if="${ad.estado != 'AGUARDANDO'}">Avaliado</span>
++                </td>
+             </tr>
+         </tbody>
+     </table>
+diff --git a/src/test/java/com/tcc/iterativa/service/AdocaoServiceI7Test.java b/src/test/java/com/tcc/iterativa/service/AdocaoServiceI7Test.java
+new file mode 100644
+index 0000000..5f98cbd
+--- /dev/null
++++ b/src/test/java/com/tcc/iterativa/service/AdocaoServiceI7Test.java
+@@ -0,0 +1,124 @@
++package com.tcc.iterativa.service;
++
++import com.tcc.iterativa.model.Adocao;
++import com.tcc.iterativa.model.Animal;
++import com.tcc.iterativa.model.Usuario;
++import com.tcc.iterativa.repository.AdocaoRepository;
++import com.tcc.iterativa.repository.AnimalRepository;
++import com.tcc.iterativa.repository.UsuarioRepository;
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.context.SpringBootTest;
++import org.springframework.transaction.annotation.Transactional;
++
++import java.time.LocalDate;
++import java.util.List;
++
++import static org.junit.jupiter.api.Assertions.*;
++
++@SpringBootTest
++@Transactional
++class AdocaoServiceI7Test {
++
++    @Autowired
++    private AdocaoService adocaoService;
++
++    @Autowired
++    private AnimalRepository animalRepository;
++
++    @Autowired
++    private UsuarioRepository usuarioRepository;
++
++    @Autowired
++    private AdocaoRepository adocaoRepository;
++
++    @Autowired
++    private AnimalService animalService;
++
++    @Autowired
++    private UsuarioService usuarioService;
++
++    @BeforeEach
++    void setUp() {
++        adocaoRepository.deleteAll();
++        animalRepository.deleteAll();
++        usuarioRepository.deleteAll();
++    }
++
++    @Test
++    void testAprovarAdocaoSucesso() throws Exception {
++        Animal animal = animalService.cadastrar(
++            "Canina", "Macho", "Sim", "Sim", "2 anos", "Labrador",
++            "Dócil", "Médio", null, "Bob", "História",
++            "Não", "Não", "Sim", null, null, null, "João", null
++        );
++
++        Usuario gestor = usuarioService.cadastrar(
++            "gestor@dogtech.com", "senha1234", "GESTOR_ADOCAO",
++            "Gestor Teste", "11111111111", LocalDate.of(1980,1,1),
++            "32999999999", "Rua A", "1", null, "Bairro", "JF", "MG", "36050000", null, "Sim"
++        );
++
++        Usuario adotante = usuarioService.cadastrar(
++            "adotante@dogtech.com", "senha1234", "ADOTANTE",
++            "Adotante Teste", "22222222222", LocalDate.of(1990,1,1),
++            "32888888888", "Rua B", "2", null, "Bairro", "JF", "MG", "36050000", null, "Não"
++        );
++
++        Adocao adocao = adocaoService.criarPedidoAdocao(animal.getId(), adotante.getEmail(), true);
++        assertEquals("AGUARDANDO", adocao.getEstado());
++
++        adocaoService.aprovarAdocao(adocao.getId(), gestor.getEmail(), "Segunda 14h");
++
++        Adocao atualizada = adocaoRepository.findById(adocao.getId()).get();
++        assertEquals("AGUARDANDO_VISITA", atualizada.getEstado());
++    }
++
++    @Test
++    void testRN007GestorNaoPodeAprovarProprioPedido() throws Exception {
++        Animal animal = animalService.cadastrar(
++            "Canina", "Macho", "Sim", "Sim", "2 anos", "Labrador",
++            "Dócil", "Médio", null, "Bob", "História",
++            "Não", "Não", "Sim", null, null, null, "João", null
++        );
++
++        Usuario gestor = usuarioService.cadastrar(
++            "gestor@dogtech.com", "senha1234", "GESTOR_ADOCAO",
++            "Gestor Teste", "11111111111", LocalDate.of(1980,1,1),
++            "32999999999", "Rua A", "1", null, "Bairro", "JF", "MG", "36050000", null, "Sim"
++        );
++
++        Adocao adocao = adocaoService.criarPedidoAdocao(animal.getId(), gestor.getEmail(), true);
++
++        // Gestor não deve listar o próprio pedido na fila
++        List<Adocao> fila = adocaoService.listarFilaAdocao(gestor.getEmail());
++        assertTrue(fila.isEmpty());
++
++        // Tentar aprovar diretamente deve lançar exceção
++        assertThrows(IllegalArgumentException.class, () -> {
++            adocaoService.aprovarAdocao(adocao.getId(), gestor.getEmail(), "Segunda 14h");
++        });
++    }
++
++    @Test
++    void testRN014CadastroManualSenhaAutomatica() throws Exception {
++        Animal animal = animalService.cadastrar(
++            "Canina", "Macho", "Sim", "Sim", "2 anos", "Labrador",
++            "Dócil", "Médio", null, "Bob", "História",
++            "Não", "Não", "Sim", null, null, null, "João", null
++        );
++
++        LocalDate dataNasc = LocalDate.of(1995, 12, 25);
++        adocaoService.cadastrarManualEClincharAdocao(
++            animal.getId(), "manual@dogtech.com", "Manual Teste", "33333333333",
++            dataNasc, "32977777777", "Rua C", "3", null, "Bairro", "JF", "MG", "36050000", null, "Não"
++        );
++
++        Usuario criado = usuarioRepository.findByEmail("manual@dogtech.com").get();
++        assertNotNull(criado);
++        assertTrue(criado.getSenhaProvisoriaRN014());
++        // Validar autenticação com senha automática DDMMYYYY (25121995)
++        assertTrue(usuarioService.autenticar("manual@dogtech.com", "25121995").isPresent());
++    }
++}

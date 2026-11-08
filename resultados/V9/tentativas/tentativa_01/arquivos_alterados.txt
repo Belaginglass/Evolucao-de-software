@@ -1,0 +1,13 @@
+Modificado	src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+Criado	src/main/java/com/tcc/iterativa/controller/ApadrinhamentoController.java
+Criado	src/main/java/com/tcc/iterativa/model/AgendaAnimal.java
+Criado	src/main/java/com/tcc/iterativa/model/Apadrinhamento.java
+Criado	src/main/java/com/tcc/iterativa/model/DoacaoFinanceira.java
+Criado	src/main/java/com/tcc/iterativa/repository/AgendaAnimalRepository.java
+Criado	src/main/java/com/tcc/iterativa/repository/ApadrinhamentoRepository.java
+Criado	src/main/java/com/tcc/iterativa/repository/DoacaoFinanceiraRepository.java
+Criado	src/main/java/com/tcc/iterativa/service/ApadrinhamentoService.java
+Criado	src/main/resources/templates/apadrinhamento/animal.html
+Criado	src/main/resources/templates/apadrinhamento/boleto.html
+Criado	src/main/resources/templates/apadrinhamento/financeiro.html
+Criado	src/test/java/com/tcc/iterativa/service/ApadrinhamentoServiceI9Test.java

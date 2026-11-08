@@ -1,0 +1,13 @@
+V9 = I9 (Apadrinhamento de animais e causas, UC007/UC008/RF012). 1 chamada à
+API — aplicou de primeira, compilou, 27/27 testes JUnit passaram.
+
+Teste manual: CT038 (apadrinhamento de animal/serviço, com criação de agenda —
+RN009) e CT039 (boleto sem autenticação) confirmados corretos.
+
+CT037 (apadrinhamento de causa) reprovado: o redirect funciona, mas para uma
+URL hardcoded no controller, não um link de fato cadastrado/configurável pelo
+Diretor Geral, como RF012 implica. Decisão: não corrigir nesta rodada — é uma
+funcionalidade secundária (um único link informativo) e o tempo restante foi
+priorizado para fechar os 10 incrementos e a análise final.
+
+Taxa de aprovação (TA) de V9: 2/3 = 66,7%.

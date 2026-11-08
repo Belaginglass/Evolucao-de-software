@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="pt"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">geracao-iterativa</a> &gt; <a href="index.source.html" class="el_package">com.tcc.iterativa.controller</a> &gt; <span class="el_source">AuthController.java</span></div><h1>AuthController.java</h1><pre class="source lang-java linenums">package com.tcc.iterativa.controller;
+
+import com.tcc.iterativa.model.Usuario;
+import com.tcc.iterativa.service.UsuarioService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Collections;
+import java.util.Optional;
+
+@Controller
+public class AuthController {
+
+    private final UsuarioService usuarioService;
+<span class="fc" id="L24">    private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();</span>
+
+<span class="fc" id="L26">    public AuthController(UsuarioService usuarioService) {</span>
+<span class="fc" id="L27">        this.usuarioService = usuarioService;</span>
+<span class="fc" id="L28">    }</span>
+
+    @GetMapping({&quot;/&quot;, &quot;/login&quot;})
+    public String loginPage() {
+<span class="nc" id="L32">        return &quot;auth/login&quot;;</span>
+    }
+
+    @PostMapping(&quot;/login&quot;)
+    public String fazerLogin(@RequestParam String email, @RequestParam String senha, Model model, HttpServletRequest request, HttpServletResponse response) {
+<span class="nc" id="L37">        Optional&lt;Usuario&gt; usuarioOpt = usuarioService.autenticar(email, senha);</span>
+<span class="nc bnc" id="L38" title="All 2 branches missed.">        if (usuarioOpt.isPresent()) {</span>
+<span class="nc" id="L39">            Usuario usuario = usuarioOpt.get();</span>
+            
+            // Estabelece a autenticacao no Spring Security Context
+<span class="nc" id="L42">            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(</span>
+<span class="nc" id="L43">                usuario.getEmail(),</span>
+                null,
+<span class="nc" id="L45">                Collections.singletonList(new SimpleGrantedAuthority(&quot;ROLE_&quot; + usuario.getPapel()))</span>
+            );
+            
+<span class="nc" id="L48">            SecurityContext context = SecurityContextHolder.createEmptyContext();</span>
+<span class="nc" id="L49">            context.setAuthentication(authentication);</span>
+<span class="nc" id="L50">            SecurityContextHolder.setContext(context);</span>
+<span class="nc" id="L51">            securityContextRepository.saveContext(context, request, response);</span>
+
+<span class="nc bnc" id="L53" title="All 2 branches missed.">            if (&quot;ADMIN&quot;.equals(usuario.getPapel())) {</span>
+<span class="nc" id="L54">                return &quot;redirect:/home-admin&quot;;</span>
+            } else {
+<span class="nc" id="L56">                return &quot;redirect:/home-adotante&quot;;</span>
+            }
+        }
+<span class="nc" id="L59">        model.addAttribute(&quot;erro&quot;, &quot;E-mail ou senha incorretos.&quot;);</span>
+<span class="nc" id="L60">        return &quot;auth/login&quot;;</span>
+    }
+
+    @PostMapping(&quot;/cadastro&quot;)
+    public String cadastrar(@RequestParam String email, @RequestParam String senha, @RequestParam(defaultValue = &quot;ADOTANTE&quot;) String papel, Model model) {
+        try {
+<span class="nc" id="L66">            usuarioService.cadastrar(email, senha, papel);</span>
+<span class="nc" id="L67">            model.addAttribute(&quot;sucesso&quot;, &quot;Cadastro realizado com sucesso! Faça login.&quot;);</span>
+<span class="nc" id="L68">        } catch (Exception e) {</span>
+<span class="nc" id="L69">            model.addAttribute(&quot;erro&quot;, e.getMessage());</span>
+<span class="nc" id="L70">        }</span>
+<span class="nc" id="L71">        return &quot;auth/login&quot;;</span>
+    }
+
+    @PostMapping(&quot;/recuperar-senha&quot;)
+    public String recuperarSenha(@RequestParam String email, Model model) {
+<span class="nc" id="L76">        String token = usuarioService.gerarTokenRecuperacao(email);</span>
+<span class="nc bnc" id="L77" title="All 2 branches missed.">        if (token != null) {</span>
+<span class="nc" id="L78">            model.addAttribute(</span>
+                &quot;sucesso&quot;,
+                &quot;Link de recuperação enviado. Simulação de link: /atualizar-senha?token=&quot; + token
+            );
+        } else {
+<span class="nc" id="L83">            model.addAttribute(&quot;erro&quot;, &quot;E-mail não encontrado.&quot;);</span>
+        }
+<span class="nc" id="L85">        return &quot;auth/login&quot;;</span>
+    }
+
+    @GetMapping(&quot;/atualizar-senha&quot;)
+    public String atualizarSenhaPage(@RequestParam String token, Model model) {
+<span class="nc" id="L90">        Optional&lt;Usuario&gt; u = usuarioService.buscarPorToken(token);</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        if (u.isPresent()) {</span>
+<span class="nc" id="L92">            model.addAttribute(&quot;token&quot;, token);</span>
+<span class="nc" id="L93">            return &quot;auth/nova-senha&quot;;</span>
+        }
+<span class="nc" id="L95">        model.addAttribute(&quot;erro&quot;, &quot;Token inválido ou expirado.&quot;);</span>
+<span class="nc" id="L96">        return &quot;auth/login&quot;;</span>
+    }
+
+    @PostMapping(&quot;/atualizar-senha&quot;)
+    public String atualizarSenha(@RequestParam String token, @RequestParam String novaSenha, Model model) {
+<span class="nc" id="L101">        boolean sucesso = usuarioService.alterarSenhaComToken(token, novaSenha);</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">        if (sucesso) {</span>
+<span class="nc" id="L103">            model.addAttribute(&quot;sucesso&quot;, &quot;Senha alterada com sucesso! Faça login.&quot;);</span>
+<span class="nc" id="L104">            return &quot;auth/login&quot;;</span>
+        }
+<span class="nc" id="L106">        model.addAttribute(&quot;token&quot;, token);</span>
+<span class="nc" id="L107">        model.addAttribute(&quot;erro&quot;, &quot;Falha ao alterar senha. Verifique o formato ou validade.&quot;);</span>
+<span class="nc" id="L108">        return &quot;auth/nova-senha&quot;;</span>
+    }
+
+    @GetMapping(&quot;/home-admin&quot;)
+    public String homeAdmin() {
+<span class="nc" id="L113">        return &quot;home/admin&quot;;</span>
+    }
+
+    @GetMapping(&quot;/home-adotante&quot;)
+    public String homeAdotante() {
+<span class="nc" id="L118">        return &quot;home/adotante&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,28 @@
+V10 = I10 (Eventos, doações e relatórios, UC012/UC013/UC014/RF013). Último
+incremento. 3 chamadas à API.
+
+- Tentativa 1: erro de compilação simples (import Collectors ausente).
+- Tentativa 2 (correção): a RESPOSTA do modelo estava correta, mas um bug no
+  próprio pipeline (gerar_codigo.py) corrompeu o arquivo ao escrevê-lo — a
+  resposta continha "\r\n" literal dentro do valor JSON, e a tradução de
+  quebra de linha do Python em modo texto no Windows duplicou os finais de
+  linha. A verificação de integridade pós-escrita (desenhada exatamente para
+  pegar isso) funcionou e abortou antes de aplicar. Corrigido no SCRIPT
+  (normalização de quebras de linha antes de escrever/comparar), não no
+  conteúdo do modelo. Arquivo parcialmente corrompido revertido via
+  `git checkout`.
+- Tentativa 3 (correção, já com o script corrigido): aplicou corretamente.
+  Compilou, 30/30 testes JUnit passaram.
+
+Teste manual: CT040-CT042 e CT044 Aprovados (CT042 só após eu corrigir o nome
+de um campo no meu próprio teste). CT043 (notificação mensal) Não executado,
+mesma decisão de escopo de incrementos anteriores.
+
+REGRESSÃO COMPLETA (I1-I9, único incremento restante — teste final de todo o
+sistema): login/home (I1), busca de CEP (I2), cadastro de animal com
+restrição de papel (I3), edição da home (I4), bloqueio de escalonamento de
+privilégio (I5), solicitação de adoção (I6), aprovação de adoção (I7), marcar
+como adotado (I8), apadrinhamento de animal (I9) — TODOS confirmados
+funcionando sem regressão após I10.
+
+Taxa de aprovação (TA) de V10: 4/5 executados = 80%.

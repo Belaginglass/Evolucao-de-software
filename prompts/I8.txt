@@ -1,0 +1,32 @@
+INCREMENTO I8 — Acompanhamento e funcionalidades de pós-adoção
+
+Implemente o caso de uso UC010 (Manter pós-adoção), descrito em detalhe no
+bloco "REQUISITOS DO INCREMENTO I8" desta mesma solicitação, e nenhuma outra
+funcionalidade. Use a entidade Adocao já existente.
+
+Funcionalidades:
+- Gestor marca uma adoção (estado AGUARDANDO_VISITA) como "ADOTADO" (transição
+  de estado, RN004).
+- A partir de 5 dias depois de uma adoção marcada como ADOTADO, o gestor pode
+  "pedir feedback" e o adotante pode "enviar feedback" (RN012). Para fins de
+  teste manual, NÃO bloqueie rigidamente por data real — adicione um parâmetro
+  ou endpoint que permita simular/forçar a contagem de dias (ex.: aceitar a
+  troca de feedback mesmo que a diferença de dias seja pequena, OU exponha a
+  data da adoção para ser manipulável em teste), para que o fluxo seja
+  verificável sem esperar 5 dias de verdade. Documente na resposta qual
+  abordagem você escolheu.
+- Troca de mensagens (pedir feedback / responder feedback) entre gestor e
+  adotante sobre a adoção.
+- RF009: ao receber a resposta do adotante, o gestor classifica o adotante por
+  estrelas (1 a 5, conforme a escala do documento de requisitos). Se mais de
+  um gestor classificar o mesmo adotante, a MENOR nota deve prevalecer.
+- RF011: o adotante pode enviar um relato/foto da experiência (Base64, nunca
+  BLOB); o relato fica PENDENTE até o gestor aprovar; só então aparece
+  publicamente numa página de "adotados". O gestor pode também remover um
+  relato já aprovado, informando o motivo; o adotante é notificado.
+- RN004: ao final do ciclo, a adoção permanece "ADOTADO" ou pode ir para
+  "DEVOLVIDO" ou "REVOGADO" se o gestor indicar necessidade.
+
+Lembre-se das lições anteriores: não use @Lob/BLOB; restrinja rotas de gestor
+com hasAnyRole no SecurityConfig; a página pública de "adotados" (relatos
+aprovados) deve ficar acessível sem login.

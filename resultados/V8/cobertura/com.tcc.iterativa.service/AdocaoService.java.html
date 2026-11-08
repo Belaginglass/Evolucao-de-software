@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="pt"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdocaoService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">geracao-iterativa</a> &gt; <a href="index.source.html" class="el_package">com.tcc.iterativa.service</a> &gt; <span class="el_source">AdocaoService.java</span></div><h1>AdocaoService.java</h1><pre class="source lang-java linenums">package com.tcc.iterativa.service;
+
+import com.tcc.iterativa.model.Adocao;
+import com.tcc.iterativa.model.Animal;
+import com.tcc.iterativa.model.Usuario;
+import com.tcc.iterativa.repository.AdocaoRepository;
+import com.tcc.iterativa.repository.AnimalRepository;
+import com.tcc.iterativa.repository.UsuarioRepository;
+import org.springframework.stereotype.Service;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Service
+public class AdocaoService {
+
+    private final AdocaoRepository adocaoRepository;
+    private final AnimalRepository animalRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final UsuarioService usuarioService;
+
+<span class="fc" id="L25">    public AdocaoService(AdocaoRepository adocaoRepository, AnimalRepository animalRepository, UsuarioRepository usuarioRepository, UsuarioService usuarioService) {</span>
+<span class="fc" id="L26">        this.adocaoRepository = adocaoRepository;</span>
+<span class="fc" id="L27">        this.animalRepository = animalRepository;</span>
+<span class="fc" id="L28">        this.usuarioRepository = usuarioRepository;</span>
+<span class="fc" id="L29">        this.usuarioService = usuarioService;</span>
+<span class="fc" id="L30">    }</span>
+
+    public List&lt;Animal&gt; listarAnimaisDisponiveisParaAdocao() {
+<span class="fc" id="L33">        List&lt;Animal&gt; todos = animalRepository.findAll();</span>
+<span class="fc" id="L34">        return todos.stream().filter(a -&gt; </span>
+<span class="fc bfc" id="L35" title="All 2 branches covered.">            &quot;Sim&quot;.equals(a.getDisponivelAdocao()) &amp;&amp;</span>
+<span class="pc bpc" id="L36" title="1 of 2 branches missed.">            !&quot;Sim&quot;.equals(a.getEmTratamento()) &amp;&amp;</span>
+<span class="pc bpc" id="L37" title="1 of 2 branches missed.">            !&quot;Sim&quot;.equals(a.getPatrimonioTombado())</span>
+<span class="fc" id="L38">        ).collect(Collectors.toList());</span>
+    }
+
+    public Optional&lt;Animal&gt; buscarAnimalPorId(Long id) {
+<span class="nc" id="L42">        return animalRepository.findById(id);</span>
+    }
+
+    public Adocao criarPedidoAdocao(Long animalId, String emailAdotante, boolean termoAceito) throws Exception {
+<span class="fc bfc" id="L46" title="All 2 branches covered.">        if (!termoAceito) {</span>
+<span class="fc" id="L47">            throw new IllegalArgumentException(&quot;O termo de adoção deve ser aceito antes de prosseguir.&quot;);</span>
+        }
+<span class="fc" id="L49">        Optional&lt;Animal&gt; animalOpt = animalRepository.findById(animalId);</span>
+<span class="pc bpc" id="L50" title="1 of 2 branches missed.">        if (animalOpt.isEmpty()) {</span>
+<span class="nc" id="L51">            throw new IllegalArgumentException(&quot;Animal não encontrado.&quot;);</span>
+        }
+<span class="fc" id="L53">        Animal animal = animalOpt.get();</span>
+<span class="pc bpc" id="L54" title="3 of 6 branches missed.">        if (!&quot;Sim&quot;.equals(animal.getDisponivelAdocao()) || &quot;Sim&quot;.equals(animal.getEmTratamento()) || &quot;Sim&quot;.equals(animal.getPatrimonioTombado())) {</span>
+<span class="nc" id="L55">            throw new IllegalArgumentException(&quot;Este animal não está disponível para adoção.&quot;);</span>
+        }
+
+<span class="fc" id="L58">        Optional&lt;Usuario&gt; usuarioOpt = usuarioRepository.findByEmail(emailAdotante);</span>
+<span class="pc bpc" id="L59" title="1 of 2 branches missed.">        if (usuarioOpt.isEmpty()) {</span>
+<span class="nc" id="L60">            throw new IllegalArgumentException(&quot;Usuário adotante não encontrado.&quot;);</span>
+        }
+<span class="fc" id="L62">        Usuario adotante = usuarioOpt.get();</span>
+
+<span class="fc" id="L64">        Adocao adocao = new Adocao(animal, adotante, &quot;AGUARDANDO&quot;, LocalDateTime.now());</span>
+<span class="fc" id="L65">        return adocaoRepository.save(adocao);</span>
+    }
+
+    public List&lt;Adocao&gt; listarAdocoesAdotante(String emailAdotante) {
+<span class="nc" id="L69">        Optional&lt;Usuario&gt; usuarioOpt = usuarioRepository.findByEmail(emailAdotante);</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">        if (usuarioOpt.isPresent()) {</span>
+<span class="nc" id="L71">            return adocaoRepository.findByAdotanteOrderByDataPedidoAsc(usuarioOpt.get());</span>
+        }
+<span class="nc" id="L73">        return List.of();</span>
+    }
+
+    public List&lt;Adocao&gt; listarFilaAdocao(String emailGestorLogado) {
+<span class="fc" id="L77">        Optional&lt;Usuario&gt; gestorOpt = usuarioRepository.findByEmail(emailGestorLogado);</span>
+<span class="fc" id="L78">        List&lt;Adocao&gt; todas = adocaoRepository.findAll();</span>
+        
+<span class="fc" id="L80">        return todas.stream().filter(a -&gt; {</span>
+<span class="pc bpc" id="L81" title="2 of 4 branches missed.">            if (gestorOpt.isPresent() &amp;&amp; a.getAdotante().getId().equals(gestorOpt.get().getId())) {</span>
+<span class="fc" id="L82">                return false;</span>
+            }
+<span class="nc" id="L84">            return true;</span>
+<span class="fc" id="L85">        }).sorted((a1, a2) -&gt; {</span>
+<span class="nc" id="L86">            boolean a1Ag = &quot;AGUARDANDO&quot;.equals(a1.getEstado());</span>
+<span class="nc" id="L87">            boolean a2Ag = &quot;AGUARDANDO&quot;.equals(a2.getEstado());</span>
+<span class="nc bnc" id="L88" title="All 4 branches missed.">            if (a1Ag &amp;&amp; !a2Ag) return -1;</span>
+<span class="nc bnc" id="L89" title="All 4 branches missed.">            if (!a1Ag &amp;&amp; a2Ag) return 1;</span>
+<span class="nc" id="L90">            return a1.getDataPedido().compareTo(a2.getDataPedido());</span>
+<span class="fc" id="L91">        }).collect(Collectors.toList());</span>
+    }
+
+    public void aprovarAdocao(Long adocaoId, String emailGestor, String disponibilidade) throws Exception {
+<span class="fc" id="L95">        Optional&lt;Adocao&gt; adocaoOpt = adocaoRepository.findById(adocaoId);</span>
+<span class="pc bpc" id="L96" title="1 of 2 branches missed.">        if (adocaoOpt.isEmpty()) {</span>
+<span class="nc" id="L97">            throw new IllegalArgumentException(&quot;Pedido de adoção não encontrado.&quot;);</span>
+        }
+<span class="fc" id="L99">        Adocao adocao = adocaoOpt.get();</span>
+<span class="fc" id="L100">        Optional&lt;Usuario&gt; gestorOpt = usuarioRepository.findByEmail(emailGestor);</span>
+        
+<span class="pc bpc" id="L102" title="1 of 4 branches missed.">        if (gestorOpt.isPresent() &amp;&amp; adocao.getAdotante().getId().equals(gestorOpt.get().getId())) {</span>
+<span class="fc" id="L103">            throw new IllegalArgumentException(&quot;RN007: Um gestor não pode aprovar sua própria solicitação de adoção.&quot;);</span>
+        }
+
+<span class="fc" id="L106">        adocao.setEstado(&quot;AGUARDANDO_VISITA&quot;);</span>
+<span class="fc" id="L107">        adocaoRepository.save(adocao);</span>
+<span class="fc" id="L108">    }</span>
+
+    public void marcarComoAdotado(Long adocaoId) {
+<span class="fc" id="L111">        Optional&lt;Adocao&gt; adocaoOpt = adocaoRepository.findById(adocaoId);</span>
+<span class="pc bpc" id="L112" title="1 of 2 branches missed.">        if (adocaoOpt.isPresent()) {</span>
+<span class="fc" id="L113">            Adocao adocao = adocaoOpt.get();</span>
+<span class="fc" id="L114">            adocao.setEstado(&quot;ADOTADO&quot;);</span>
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">            if (adocao.getDataAdocaoEfetiva() == null) {</span>
+<span class="fc" id="L116">                adocao.setDataAdocaoEfetiva(LocalDateTime.now());</span>
+            }
+<span class="fc" id="L118">            adocaoRepository.save(adocao);</span>
+        }
+<span class="fc" id="L120">    }</span>
+
+    public void reprovarAdocao(Long adocaoId) {
+<span class="nc" id="L123">        Optional&lt;Adocao&gt; adocaoOpt = adocaoRepository.findById(adocaoId);</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">        if (adocaoOpt.isPresent()) {</span>
+<span class="nc" id="L125">            Adocao adocao = adocaoOpt.get();</span>
+<span class="nc" id="L126">            adocao.setEstado(&quot;REPROVADO&quot;);</span>
+<span class="nc" id="L127">            adocaoRepository.save(adocao);</span>
+        }
+<span class="nc" id="L129">    }</span>
+
+    public void reprovarTodosDemais(Long animalId, Long adocaoExcecaoId) {
+<span class="nc" id="L132">        Optional&lt;Animal&gt; animalOpt = animalRepository.findById(animalId);</span>
+<span class="nc bnc" id="L133" title="All 2 branches missed.">        if (animalOpt.isPresent()) {</span>
+<span class="nc" id="L134">            List&lt;Adocao&gt; adocoes = adocaoRepository.findByAnimal(animalOpt.get());</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">            for (Adocao a : adocoes) {</span>
+<span class="nc bnc" id="L136" title="All 4 branches missed.">                if (!a.getId().equals(adocaoExcecaoId) &amp;&amp; &quot;AGUARDANDO&quot;.equals(a.getEstado())) {</span>
+<span class="nc" id="L137">                    a.setEstado(&quot;REPROVADO&quot;);</span>
+<span class="nc" id="L138">                    adocaoRepository.save(a);</span>
+                }
+<span class="nc" id="L140">            }</span>
+        }
+<span class="nc" id="L142">    }</span>
+
+    public void cadastrarManualEClincharAdocao(Long animalId, String email, String nome, String cpf, LocalDate dataNascimento, String telefones, String rua, String numero, String complemento, String bairro, String cidade, String estado, String cep, byte[] fotoBytes, String voluntario) throws Exception {
+<span class="fc" id="L145">        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(&quot;ddMMyyyy&quot;);</span>
+<span class="fc" id="L146">        String senhaAutomatica = dataNascimento.format(formatter);</span>
+
+<span class="fc" id="L148">        Usuario novoAdotante = usuarioService.cadastrar(email, senhaAutomatica, &quot;ADOTANTE&quot;, nome, cpf, dataNascimento, telefones, rua, numero, complemento, bairro, cidade, estado, cep, fotoBytes, voluntario);</span>
+<span class="fc" id="L149">        novoAdotante.setSenhaProvisoriaRN014(true);</span>
+<span class="fc" id="L150">        usuarioRepository.save(novoAdotante);</span>
+
+<span class="fc" id="L152">        Optional&lt;Animal&gt; animalOpt = animalRepository.findById(animalId);</span>
+<span class="pc bpc" id="L153" title="1 of 2 branches missed.">        if (animalOpt.isPresent()) {</span>
+<span class="fc" id="L154">            Animal animal = animalOpt.get();</span>
+<span class="fc" id="L155">            Adocao adocao = new Adocao(animal, novoAdotante, &quot;AGUARDANDO_VISITA&quot;, LocalDateTime.now());</span>
+<span class="fc" id="L156">            adocaoRepository.save(adocao);</span>
+        }
+<span class="fc" id="L158">    }</span>
+
+    public List&lt;Adocao&gt; listarAdocoesParaPosAdocao() {
+<span class="nc" id="L161">        return adocaoRepository.findAll().stream()</span>
+<span class="nc bnc" id="L162" title="All 4 branches missed.">            .filter(a -&gt; &quot;ADOTADO&quot;.equals(a.getEstado()) || &quot;AGUARDANDO_VISITA&quot;.equals(a.getEstado()))</span>
+<span class="nc" id="L163">            .collect(Collectors.toList());</span>
+    }
+
+    public void pedirFeedback(Long adocaoId, String mensagem) {
+<span class="fc" id="L167">        Optional&lt;Adocao&gt; opt = adocaoRepository.findById(adocaoId);</span>
+<span class="pc bpc" id="L168" title="1 of 2 branches missed.">        if (opt.isPresent()) {</span>
+<span class="fc" id="L169">            Adocao a = opt.get();</span>
+<span class="fc" id="L170">            a.setMensagemFeedbackGestor(mensagem);</span>
+<span class="fc" id="L171">            adocaoRepository.save(a);</span>
+        }
+<span class="fc" id="L173">    }</span>
+
+    public void enviarFeedbackAdotante(Long adocaoId, String resposta, String fotoBase64) {
+<span class="fc" id="L176">        Optional&lt;Adocao&gt; opt = adocaoRepository.findById(adocaoId);</span>
+<span class="pc bpc" id="L177" title="1 of 2 branches missed.">        if (opt.isPresent()) {</span>
+<span class="fc" id="L178">            Adocao a = opt.get();</span>
+<span class="fc" id="L179">            a.setRespostaFeedbackAdotante(resposta);</span>
+<span class="pc bpc" id="L180" title="3 of 4 branches missed.">            if (fotoBase64 != null &amp;&amp; !fotoBase64.isEmpty()) {</span>
+<span class="nc" id="L181">                a.setFotoRelato(fotoBase64);</span>
+            }
+<span class="fc" id="L183">            adocaoRepository.save(a);</span>
+        }
+<span class="fc" id="L185">    }</span>
+
+    public void avaliarFeedbackGestor(Long adocaoId, int estrelas, boolean precisaAcompanhamento, boolean revogar, String respostaGestor, String novoEstado) {
+<span class="fc" id="L188">        Optional&lt;Adocao&gt; opt = adocaoRepository.findById(adocaoId);</span>
+<span class="pc bpc" id="L189" title="1 of 2 branches missed.">        if (opt.isPresent()) {</span>
+<span class="fc" id="L190">            Adocao a = opt.get();</span>
+<span class="fc" id="L191">            a.setEstrelasAvaliacao(estrelas);</span>
+            
+<span class="fc" id="L193">            Usuario adotante = a.getAdotante();</span>
+<span class="pc bpc" id="L194" title="1 of 4 branches missed.">            if (adotante.getMenorEstrelaAvaliacao() == null || estrelas &lt; adotante.getMenorEstrelaAvaliacao()) {</span>
+<span class="fc" id="L195">                adotante.setMenorEstrelaAvaliacao(estrelas);</span>
+            } else {
+<span class="nc" id="L197">                adotante.setMenorEstrelaAvaliacao(Math.min(adotante.getMenorEstrelaAvaliacao(), estrelas));</span>
+            }
+<span class="fc" id="L199">            usuarioRepository.save(adotante);</span>
+
+<span class="pc bpc" id="L201" title="1 of 2 branches missed.">            if (revogar) {</span>
+<span class="nc" id="L202">                a.setEstado(&quot;REVOGADO&quot;);</span>
+<span class="pc bpc" id="L203" title="2 of 4 branches missed.">            } else if (novoEstado != null &amp;&amp; !novoEstado.isEmpty()) {</span>
+<span class="fc" id="L204">                a.setEstado(novoEstado);</span>
+            }
+<span class="fc" id="L206">            a.setMensagemFeedbackGestor(respostaGestor);</span>
+<span class="fc" id="L207">            adocaoRepository.save(a);</span>
+        }
+<span class="fc" id="L209">    }</span>
+
+    public void enviarRelatoAdotante(Long adocaoId, String relato, String fotoBase64) {
+<span class="fc" id="L212">        Optional&lt;Adocao&gt; opt = adocaoRepository.findById(adocaoId);</span>
+<span class="pc bpc" id="L213" title="1 of 2 branches missed.">        if (opt.isPresent()) {</span>
+<span class="fc" id="L214">            Adocao a = opt.get();</span>
+<span class="fc" id="L215">            a.setRelatoAdotante(relato);</span>
+<span class="pc bpc" id="L216" title="3 of 4 branches missed.">            if (fotoBase64 != null &amp;&amp; !fotoBase64.isEmpty()) {</span>
+<span class="nc" id="L217">                a.setFotoRelato(fotoBase64);</span>
+            }
+<span class="fc" id="L219">            a.setRelatoAprovado(null); // Pendente</span>
+<span class="fc" id="L220">            adocaoRepository.save(a);</span>
+        }
+<span class="fc" id="L222">    }</span>
+
+    public List&lt;Adocao&gt; listarRelatosPendentes() {
+<span class="fc" id="L225">        return adocaoRepository.findAll().stream()</span>
+<span class="pc bpc" id="L226" title="4 of 6 branches missed.">            .filter(a -&gt; a.getRelatoAdotante() != null &amp;&amp; (a.getRelatoAprovado() == null || !a.getRelatoAprovado()))</span>
+<span class="fc" id="L227">            .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Adocao&gt; listarRelatosAprovadosPublicos() {
+<span class="fc" id="L231">        return adocaoRepository.findAll().stream()</span>
+<span class="pc bpc" id="L232" title="2 of 4 branches missed.">            .filter(a -&gt; Boolean.TRUE.equals(a.getRelatoAprovado()) &amp;&amp; a.getRelatoAdotante() != null)</span>
+<span class="fc" id="L233">            .collect(Collectors.toList());</span>
+    }
+
+    public void aprovarRelato(Long adocaoId, boolean aprovar, String motivoRemocao) {
+<span class="fc" id="L237">        Optional&lt;Adocao&gt; opt = adocaoRepository.findById(adocaoId);</span>
+<span class="pc bpc" id="L238" title="1 of 2 branches missed.">        if (opt.isPresent()) {</span>
+<span class="fc" id="L239">            Adocao a = opt.get();</span>
+<span class="pc bpc" id="L240" title="1 of 2 branches missed.">            if (aprovar) {</span>
+<span class="fc" id="L241">                a.setRelatoAprovado(true);</span>
+<span class="fc" id="L242">                a.setMotivoRemocaoRelato(null);</span>
+            } else {
+<span class="nc" id="L244">                a.setRelatoAprovado(false);</span>
+<span class="nc" id="L245">                a.setMotivoRemocaoRelato(motivoRemocao);</span>
+            }
+<span class="fc" id="L247">            adocaoRepository.save(a);</span>
+        }
+<span class="fc" id="L249">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

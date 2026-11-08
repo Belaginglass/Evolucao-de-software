@@ -1,0 +1,33 @@
+INCREMENTO I10 — Gerenciamento de eventos, doações e relatórios
+
+Implemente os casos de uso UC012 (Manter eventos), UC013 (Manter doações) e
+UC014 (Manter relatórios), descritos em detalhe no bloco "REQUISITOS DO
+INCREMENTO I10" desta mesma solicitação. Este é o ÚLTIMO incremento — não há
+mais nenhuma funcionalidade a seguir.
+
+UC012 (eventos): Diretor Geral cria/edita/exclui eventos (nome, data,
+descrição); visão pública lista eventos ordenados pela data mais próxima.
+
+UC013 (doações — RF013): já existe DoacaoFinanceira de I9 para doações
+pontuais/mensais feitas por qualquer visitante. Este incremento é sobre o
+Diretor Geral MANTER pedidos/campanhas de doação (criar/editar/excluir um
+pedido de doação com título e valor sugerido, visão pública lista pedidos
+ativos) — não confunda com a geração de boleto de I9; são conceitos
+relacionados mas distintos (RF013 é sobre o PEDIDO/campanha, I9 foi sobre a
+transação individual).
+
+UC014 (relatórios): página simples com dados agregados que já existem no
+sistema (ex.: total de animais cadastrados, total de adoções por estado,
+total de usuários, total de eventos/doações) — não invente uma fonte de dados
+nova, use apenas o que já existe nas entidades já implementadas.
+
+Lembre-se das lições anteriores:
+- Restrinja rotas de criação/edição a hasAnyRole('DIRETOR_GERAL',
+  'GESTOR_ADOCAO') (ou hasRole('DIRETOR_GERAL') quando o requisito for
+  explícito sobre ser exclusivo do Diretor Geral); visualização pública sem
+  login.
+- Não use @Lob/BLOB.
+- Como este é o último incremento, teste manualmente se TODAS as
+  funcionalidades anteriores (I1 a I9) continuam acessíveis e funcionando —
+  presumo que você vai revisar isso, então garanta que nenhuma rota existente
+  foi removida ou teve seu comportamento alterado sem necessidade.

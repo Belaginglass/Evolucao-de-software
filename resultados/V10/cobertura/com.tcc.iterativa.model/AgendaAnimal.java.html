@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="pt"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AgendaAnimal.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">geracao-iterativa</a> &gt; <a href="index.source.html" class="el_package">com.tcc.iterativa.model</a> &gt; <span class="el_source">AgendaAnimal.java</span></div><h1>AgendaAnimal.java</h1><pre class="source lang-java linenums">package com.tcc.iterativa.model;
+
+import jakarta.persistence.*;
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+@Entity
+@Table(name = &quot;agendas_animais&quot;)
+public class AgendaAnimal {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = &quot;animal_id&quot;, nullable = false)
+    private Animal animal;
+
+    private LocalDate dia;
+    private LocalTime horario;
+
+    private String descricao;
+
+<span class="fc" id="L24">    public AgendaAnimal() {}</span>
+
+<span class="fc" id="L26">    public AgendaAnimal(Animal animal, LocalDate dia, LocalTime horario, String descricao) {</span>
+<span class="fc" id="L27">        this.animal = animal;</span>
+<span class="fc" id="L28">        this.dia = dia;</span>
+<span class="fc" id="L29">        this.horario = horario;</span>
+<span class="fc" id="L30">        this.descricao = descricao;</span>
+<span class="fc" id="L31">    }</span>
+
+<span class="nc" id="L33">    public Long getId() { return id; }</span>
+<span class="nc" id="L34">    public void setId(Long id) { this.id = id; }</span>
+
+<span class="nc" id="L36">    public Animal getAnimal() { return animal; }</span>
+<span class="nc" id="L37">    public void setAnimal(Animal animal) { this.animal = animal; }</span>
+
+<span class="nc" id="L39">    public LocalDate getDia() { return dia; }</span>
+<span class="nc" id="L40">    public void setDia(LocalDate dia) { this.dia = dia; }</span>
+
+<span class="nc" id="L42">    public LocalTime getHorario() { return horario; }</span>
+<span class="nc" id="L43">    public void setHorario(LocalTime horario) { this.horario = horario; }</span>
+
+<span class="fc" id="L45">    public String getDescricao() { return descricao; }</span>
+<span class="nc" id="L46">    public void setDescricao(String descricao) { this.descricao = descricao; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

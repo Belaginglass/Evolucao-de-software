@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="pt"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UsuarioController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">geracao-iterativa</a> &gt; <a href="index.source.html" class="el_package">com.tcc.iterativa.controller</a> &gt; <span class="el_source">UsuarioController.java</span></div><h1>UsuarioController.java</h1><pre class="source lang-java linenums">package com.tcc.iterativa.controller;
+
+import com.tcc.iterativa.model.Usuario;
+import com.tcc.iterativa.repository.UsuarioRepository;
+import com.tcc.iterativa.service.UsuarioService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+@Controller
+public class UsuarioController {
+
+    private final UsuarioService usuarioService;
+    private final UsuarioRepository usuarioRepository;
+
+<span class="fc" id="L25">    public UsuarioController(UsuarioService usuarioService, UsuarioRepository usuarioRepository) {</span>
+<span class="fc" id="L26">        this.usuarioService = usuarioService;</span>
+<span class="fc" id="L27">        this.usuarioRepository = usuarioRepository;</span>
+<span class="fc" id="L28">    }</span>
+
+    @GetMapping(&quot;/meus-dados&quot;)
+    public String exibirMeusDados(Authentication authentication, Model model) {
+<span class="nc bnc" id="L32" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc" id="L33">        String email = authentication.getName();</span>
+<span class="nc" id="L34">        Optional&lt;Usuario&gt; opt = usuarioRepository.findByEmail(email);</span>
+<span class="nc bnc" id="L35" title="All 2 branches missed.">        if (opt.isPresent()) {</span>
+<span class="nc" id="L36">            model.addAttribute(&quot;usuario&quot;, opt.get());</span>
+<span class="nc" id="L37">            return &quot;auth/meus-dados&quot;;</span>
+        }
+<span class="nc" id="L39">        return &quot;redirect:/login&quot;;</span>
+    }
+
+    @PostMapping(&quot;/meus-dados&quot;)
+    public String atualizarMeusDados(
+            Authentication authentication,
+            @RequestParam String nome,
+            @RequestParam String cpf,
+            @RequestParam LocalDate dataNascimento,
+            @RequestParam String telefones,
+            @RequestParam String rua,
+            @RequestParam String numero,
+            @RequestParam(required = false) String complemento,
+            @RequestParam String bairro,
+            @RequestParam String cidade,
+            @RequestParam String estado,
+            @RequestParam String cep,
+            @RequestParam(required = false) MultipartFile fotoFile,
+            @RequestParam String voluntario,
+            @RequestParam(required = false) String novaSenha,
+            Model model) {
+<span class="nc bnc" id="L60" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+<span class="nc" id="L61">        String email = authentication.getName();</span>
+        try {
+<span class="nc bnc" id="L63" title="All 4 branches missed.">            byte[] fotoBytes = (fotoFile != null &amp;&amp; !fotoFile.isEmpty()) ? fotoFile.getBytes() : null;</span>
+<span class="nc" id="L64">            String token = usuarioService.atualizarDadosPessoais(email, nome, cpf, dataNascimento, telefones, rua, numero, complemento, bairro, cidade, estado, cep, fotoBytes, voluntario, novaSenha);</span>
+<span class="nc" id="L65">            model.addAttribute(&quot;sucesso&quot;, &quot;Dados atualizados com sucesso! E-mail de confirmação simulado com token: /atualizar-senha?token=&quot; + token);</span>
+<span class="nc" id="L66">            Optional&lt;Usuario&gt; opt = usuarioRepository.findByEmail(email);</span>
+<span class="nc" id="L67">            opt.ifPresent(usuario -&gt; model.addAttribute(&quot;usuario&quot;, usuario));</span>
+<span class="nc" id="L68">        } catch (Exception e) {</span>
+<span class="nc" id="L69">            model.addAttribute(&quot;erro&quot;, e.getMessage());</span>
+<span class="nc" id="L70">            Optional&lt;Usuario&gt; opt = usuarioRepository.findByEmail(email);</span>
+<span class="nc" id="L71">            opt.ifPresent(usuario -&gt; model.addAttribute(&quot;usuario&quot;, usuario));</span>
+<span class="nc" id="L72">        }</span>
+<span class="nc" id="L73">        return &quot;auth/meus-dados&quot;;</span>
+    }
+
+    @GetMapping(&quot;/usuarios/gerenciar&quot;)
+    public String gerenciarAtores(
+            Authentication authentication,
+            @RequestParam(required = false) String busca,
+            @RequestParam(required = false) String cargoFiltro,
+            Model model) {
+<span class="nc bnc" id="L82" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+        
+<span class="nc" id="L84">        List&lt;Usuario&gt; usuarios = usuarioService.listarUsuariosAdministrativos(busca, cargoFiltro);</span>
+<span class="nc" id="L85">        model.addAttribute(&quot;usuarios&quot;, usuarios);</span>
+<span class="nc" id="L86">        model.addAttribute(&quot;busca&quot;, busca);</span>
+<span class="nc" id="L87">        model.addAttribute(&quot;cargoFiltro&quot;, cargoFiltro);</span>
+<span class="nc" id="L88">        return &quot;usuario/gerenciar&quot;;</span>
+    }
+
+    @PostMapping(&quot;/usuarios/privilegios&quot;)
+    public String alterarPrivilegios(
+            Authentication authentication,
+            @RequestParam Long usuarioId,
+            @RequestParam String papel,
+            @RequestParam String statusAdmin,
+            Model model) {
+<span class="nc bnc" id="L98" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+        
+<span class="nc bnc" id="L100" title="All 4 branches missed.">        if (authentication.getAuthorities() == null || !authentication.getAuthorities().contains(new SimpleGrantedAuthority(&quot;ROLE_DIRETOR_GERAL&quot;))) {</span>
+<span class="nc" id="L101">            model.addAttribute(&quot;erro&quot;, &quot;Acesso negado: apenas Diretor Geral pode alterar privilégios.&quot;);</span>
+<span class="nc" id="L102">            List&lt;Usuario&gt; usuarios = usuarioService.listarUsuariosAdministrativos(null, null);</span>
+<span class="nc" id="L103">            model.addAttribute(&quot;usuarios&quot;, usuarios);</span>
+<span class="nc" id="L104">            return &quot;usuario/gerenciar&quot;;</span>
+        }
+        
+        try {
+<span class="nc" id="L108">            usuarioService.alterarPrivilegios(usuarioId, papel, statusAdmin);</span>
+<span class="nc" id="L109">            model.addAttribute(&quot;sucesso&quot;, &quot;Privilégios atualizados com sucesso! [PRT-10]&quot;);</span>
+<span class="nc" id="L110">        } catch (Exception e) {</span>
+<span class="nc" id="L111">            model.addAttribute(&quot;erro&quot;, e.getMessage());</span>
+<span class="nc" id="L112">        }</span>
+        
+<span class="nc" id="L114">        List&lt;Usuario&gt; usuarios = usuarioService.listarUsuariosAdministrativos(null, null);</span>
+<span class="nc" id="L115">        model.addAttribute(&quot;usuarios&quot;, usuarios);</span>
+<span class="nc" id="L116">        return &quot;usuario/gerenciar&quot;;</span>
+    }
+
+    @PostMapping(&quot;/usuarios/excluir&quot;)
+    public String excluirAcessoAdministrativo(
+            Authentication authentication,
+            @RequestParam Long usuarioId,
+            Model model) {
+<span class="nc bnc" id="L124" title="All 2 branches missed.">        if (authentication == null) return &quot;redirect:/login&quot;;</span>
+        
+<span class="nc bnc" id="L126" title="All 4 branches missed.">        if (authentication.getAuthorities() == null || !authentication.getAuthorities().contains(new SimpleGrantedAuthority(&quot;ROLE_DIRETOR_GERAL&quot;))) {</span>
+<span class="nc" id="L127">            model.addAttribute(&quot;erro&quot;, &quot;Acesso negado: apenas Diretor Geral pode excluir acesso administrativo.&quot;);</span>
+<span class="nc" id="L128">            List&lt;Usuario&gt; usuarios = usuarioService.listarUsuariosAdministrativos(null, null);</span>
+<span class="nc" id="L129">            model.addAttribute(&quot;usuarios&quot;, usuarios);</span>
+<span class="nc" id="L130">            return &quot;usuario/gerenciar&quot;;</span>
+        }
+        
+        try {
+<span class="nc" id="L134">            usuarioService.excluirAcessoAdministrativo(usuarioId);</span>
+<span class="nc" id="L135">            model.addAttribute(&quot;sucesso&quot;, &quot;Acesso administrativo excluído com sucesso!&quot;);</span>
+<span class="nc" id="L136">        } catch (Exception e) {</span>
+<span class="nc" id="L137">            model.addAttribute(&quot;erro&quot;, e.getMessage());</span>
+<span class="nc" id="L138">        }</span>
+<span class="nc" id="L139">        List&lt;Usuario&gt; usuarios = usuarioService.listarUsuariosAdministrativos(null, null);</span>
+<span class="nc" id="L140">        model.addAttribute(&quot;usuarios&quot;, usuarios);</span>
+<span class="nc" id="L141">        return &quot;usuario/gerenciar&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

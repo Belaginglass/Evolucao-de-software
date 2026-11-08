@@ -1,0 +1,375 @@
+diff --git a/src/main/java/com/tcc/iterativa/config/SecurityConfig.java b/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+index 6995f61..3582839 100644
+--- a/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
++++ b/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+@@ -16,7 +16,8 @@ public class SecurityConfig {
+             .csrf(csrf -> csrf.disable())
+             .authorizeHttpRequests(auth -> auth
+                 .requestMatchers("/", "/login", "/cadastro", "/recuperar-senha", "/atualizar-senha", "/buscar-cep", "/h2-console/**").permitAll()
+-                .requestMatchers("/animais/**", "/baias/**", "/home/sobre-nos", "/home/servicos/**", "/home/campanhas/**", "/home/doacoes/**").hasRole("ADMIN")
++                .requestMatchers("/usuarios/gerenciar").hasRole("DIRETOR_GERAL")
++                .requestMatchers("/animais/**", "/baias/**", "/home/sobre-nos", "/home/servicos/**", "/home/campanhas/**", "/home/doacoes/**").hasAnyRole("DIRETOR_GERAL", "GESTOR_ADOCAO")
+                 .anyRequest().authenticated()
+             )
+             .formLogin(form -> form.disable());
+diff --git a/src/main/java/com/tcc/iterativa/controller/AuthController.java b/src/main/java/com/tcc/iterativa/controller/AuthController.java
+index 039959d..f56c4f2 100644
+--- a/src/main/java/com/tcc/iterativa/controller/AuthController.java
++++ b/src/main/java/com/tcc/iterativa/controller/AuthController.java
+@@ -47,6 +47,11 @@ public class AuthController {
+         if (usuarioOpt.isPresent()) {
+             Usuario usuario = usuarioOpt.get();
+             
++            if ("DESABILITADO".equals(usuario.getStatusAdmin())) {
++                model.addAttribute("erro", "Seu acesso administrativo foi desabilitado.");
++                return "auth/login";
++            }
++            
+             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                 usuario.getEmail(),
+                 null,
+@@ -58,7 +63,7 @@ public class AuthController {
+             SecurityContextHolder.setContext(context);
+             securityContextRepository.saveContext(context, request, response);
+ 
+-            if ("ADMIN".equals(usuario.getPapel())) {
++            if ("DIRETOR_GERAL".equals(usuario.getPapel()) || "GESTOR_ADOCAO".equals(usuario.getPapel()) || "ADMIN".equals(usuario.getPapel())) {
+                 return "redirect:/home-admin";
+             } else {
+                 return "redirect:/home-adotante";
+@@ -103,7 +108,7 @@ public class AuthController {
+             SecurityContextHolder.setContext(context);
+             securityContextRepository.saveContext(context, request, response);
+ 
+-            if ("ADMIN".equals(novoUsuario.getPapel())) {
++            if ("DIRETOR_GERAL".equals(novoUsuario.getPapel()) || "GESTOR_ADOCAO".equals(novoUsuario.getPapel()) || "ADMIN".equals(novoUsuario.getPapel())) {
+                 return "redirect:/home-admin";
+             } else {
+                 return "redirect:/home-adotante";
+diff --git a/src/main/java/com/tcc/iterativa/controller/UsuarioController.java b/src/main/java/com/tcc/iterativa/controller/UsuarioController.java
+index c2bf1c7..b76e206 100644
+--- a/src/main/java/com/tcc/iterativa/controller/UsuarioController.java
++++ b/src/main/java/com/tcc/iterativa/controller/UsuarioController.java
+@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
+ import org.springframework.web.multipart.MultipartFile;
+ 
+ import java.time.LocalDate;
++import java.util.List;
+ import java.util.Optional;
+ 
+ @Controller
+@@ -70,4 +71,58 @@ public class UsuarioController {
+         }
+         return "auth/meus-dados";
+     }
++
++    @GetMapping("/usuarios/gerenciar")
++    public String gerenciarAtores(
++            Authentication authentication,
++            @RequestParam(required = false) String busca,
++            @RequestParam(required = false) String cargoFiltro,
++            Model model) {
++        if (authentication == null) return "redirect:/login";
++        
++        List<Usuario> usuarios = usuarioService.listarUsuariosAdministrativos(busca, cargoFiltro);
++        model.addAttribute("usuarios", usuarios);
++        model.addAttribute("busca", busca);
++        model.addAttribute("cargoFiltro", cargoFiltro);
++        return "usuario/gerenciar";
++    }
++
++    @PostMapping("/usuarios/privilegios")
++    public String alterarPrivilegios(
++            Authentication authentication,
++            @RequestParam Long usuarioId,
++            @RequestParam String papel,
++            @RequestParam String statusAdmin,
++            Model model) {
++        if (authentication == null) return "redirect:/login";
++        
++        try {
++            usuarioService.alterarPrivilegios(usuarioId, papel, statusAdmin);
++            model.addAttribute("sucesso", "Privilégios atualizados com sucesso! [PRT-10]");
++        } catch (Exception e) {
++            model.addAttribute("erro", e.getMessage());
++        }
++        
++        List<Usuario> usuarios = usuarioService.listarUsuariosAdministrativos(null, null);
++        model.addAttribute("usuarios", usuarios);
++        return "usuario/gerenciar";
++    }
++
++    @PostMapping(
++            "/usuarios/excluir")
++    public String excluirAcessoAdministrativo(
++            Authentication authentication,
++            @RequestParam Long usuarioId,
++            Model model) {
++        if (authentication == null) return "redirect:/login";
++        try {
++            usuarioService.excluirAcessoAdministrativo(usuarioId);
++            model.addAttribute("sucesso", "Acesso administrativo excluído com sucesso!");
++        } catch (Exception e) {
++            model.addAttribute("erro", e.getMessage());
++        }
++        List<Usuario> usuarios = usuarioService.listarUsuariosAdministrativos(null, null);
++        model.addAttribute("usuarios", usuarios);
++        return "usuario/gerenciar";
++    }
+ }
+diff --git a/src/main/java/com/tcc/iterativa/model/Usuario.java b/src/main/java/com/tcc/iterativa/model/Usuario.java
+index d679eb8..2fc68f9 100644
+--- a/src/main/java/com/tcc/iterativa/model/Usuario.java
++++ b/src/main/java/com/tcc/iterativa/model/Usuario.java
+@@ -22,7 +22,9 @@ public class Usuario {
+     private String salt;
+ 
+     @Column(nullable = false)
+-    private String papel; // ADMIN ou ADOTANTE
++    private String papel; // DIRETOR_GERAL, GESTOR_ADOCAO, ou ADOTANTE
++
++    private String statusAdmin; // ATIVO ou DESABILITADO
+ 
+     private String tokenRecuperacao;
+     private LocalDateTime validadeToken;
+@@ -59,6 +61,7 @@ public class Usuario {
+         this.senha = senha;
+         this.salt = salt;
+         this.papel = papel;
++        this.statusAdmin = "ATIVO";
+     }
+ 
+     public Long getId() { return id; }
+@@ -76,6 +79,9 @@ public class Usuario {
+     public String getPapel() { return papel; }
+     public void setPapel(String papel) { this.papel = papel; }
+ 
++    public String getStatusAdmin() { return statusAdmin; }
++    public void setStatusAdmin(String statusAdmin) { this.statusAdmin = statusAdmin; }
++
+     public String getTokenRecuperacao() { return tokenRecuperacao; }
+     public void setTokenRecuperacao(String tokenRecuperacao) { this.tokenRecuperacao = tokenRecuperacao; }
+ 
+diff --git a/src/main/java/com/tcc/iterativa/service/UsuarioService.java b/src/main/java/com/tcc/iterativa/service/UsuarioService.java
+index d87e23b..e01d153 100644
+--- a/src/main/java/com/tcc/iterativa/service/UsuarioService.java
++++ b/src/main/java/com/tcc/iterativa/service/UsuarioService.java
+@@ -9,9 +9,11 @@ import org.springframework.stereotype.Service;
+ import java.time.LocalDate;
+ import java.time.LocalDateTime;
+ import java.util.Base64;
++import java.util.List;
+ import java.util.Map;
+ import java.util.Optional;
+ import java.util.UUID;
++import java.util.stream.Collectors;
+ 
+ @Service
+ public class UsuarioService {
+@@ -164,4 +166,47 @@ public class UsuarioService {
+         usuarioRepository.save(u);
+         return token;
+     }
++
++    public List<Usuario> listarUsuariosAdministrativos(String busca, String cargoFiltro) {
++        List<Usuario> todos = usuarioRepository.findAll();
++        return todos.stream().filter(u -> {
++            boolean ehAdmin = "DIRETOR_GERAL".equals(u.getPapel()) || "GESTOR_ADOCAO".equals(u.getPapel()) || "ADMIN".equals(u.getPapel());
++            if (!ehAdmin) return false;
++
++            if (busca != null && !busca.trim().isEmpty()) {
++                String b = busca.toLowerCase();
++                boolean matchNome = u.getNome() != null && u.getNome().toLowerCase().contains(b);
++                boolean matchEmail = u.getEmail() != null && u.getEmail().toLowerCase().contains(b);
++                if (!matchNome && !matchEmail) return false;
++            }
++
++            if (cargoFiltro != null && !cargoFiltro.trim().isEmpty()) {
++                if (!cargoFiltro.equals(u.getPapel())) return false;
++            }
++
++            return true;
++        }).collect(Collectors.toList());
++    }
++
++    public void alterarPrivilegios(Long usuarioId, String novoPapel, String novoStatus) {
++        Optional<Usuario> opt = usuarioRepository.findById(usuarioId);
++        if (opt.isPresent()) {
++            Usuario u = opt.get();
++            u.setPapel(novoPapel);
++            u.setStatusAdmin(novoStatus);
++            usuarioRepository.save(u);
++        } else {
++            throw new IllegalArgumentException("Usuário não encontrado.");
++        }
++    }
++
++    public void excluirAcessoAdministrativo(Long usuarioId) {
++        Optional<Usuario> opt = usuarioRepository.findById(usuarioId);
++        if (opt.isPresent()) {
++            Usuario u = opt.get();
++            u.setPapel("ADOTANTE");
++            u.setStatusAdmin(null);
++            usuarioRepository.save(u);
++        }
++    }
+ }
+diff --git a/src/main/resources/templates/home/admin.html b/src/main/resources/templates/home/admin.html
+index 6d681a6..393e2e5 100644
+--- a/src/main/resources/templates/home/admin.html
++++ b/src/main/resources/templates/home/admin.html
+@@ -7,6 +7,7 @@
+     <p><a href="/meus-dados">Meus Dados (UC011)</a></p>
+     <p><a href="/animais/novo">Cadastrar Animal (UC003 / RF002)</a></p>
+     <p><a href="/baias">Gerenciar Baias (RF008)</a></p>
++    <p th:if="${#authorization.expression('hasRole(''DIRETOR_GERAL'')')}"><a href="/usuarios/gerenciar">Gerenciar Atores / Privilégios [PRT-10] (UC004)</a></p>
+     <hr>
+     <h3>Gerenciamento da Página Inicial (UC009)</h3>
+     <p><a href="/home/sobre-nos">Editar Texto 'Sobre Nós' [PRT-31]</a></p>
+diff --git a/src/main/resources/templates/usuario/gerenciar.html b/src/main/resources/templates/usuario/gerenciar.html
+new file mode 100644
+index 0000000..71f0af9
+--- /dev/null
++++ b/src/main/resources/templates/usuario/gerenciar.html
+@@ -0,0 +1,76 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Manter Privilégio dos Atores [PRT-10]</title>
++</head>
++<body>
++    <h2>DogTech - Gerenciamento de Privilégios [PRT-10] (UC004)</h2>
++    <p><a href="/home-admin">Voltar</a></p>
++
++    <div th:if="${erro}" style="color: red;"><p th:text="${erro}"></p></div>
++    <div th:if="${sucesso}" style="color: green;"><p th:text="${sucesso}"></p></div>
++
++    <!-- [FA-9] Filtros -->
++    <form action="/usuarios/gerenciar" method="get">
++        <label>Buscar por Nome ou E-mail:</label>
++        <input type="text" name="busca" th:value="${busca}">
++        
++        <label>Cargo:</label>
++        <select name="cargoFiltro">
++            <option value="">Todos</option>
++            <option value="DIRETOR_GERAL" th:selected="${cargoFiltro == 'DIRETOR_GERAL'}">Diretor Geral</option>
++            <option value="GESTOR_ADOCAO" th:selected="${cargoFiltro == 'GESTOR_ADOCAO'}">Gestor de Adoção</option>
++            <option value="ADMIN" th:selected="${cargoFiltro == 'ADMIN'}">Administrador</option>
++        </select>
++        
++        <button type="submit">Filtrar</button>
++        <a href="/usuarios/gerenciar"><button type="button">Limpar Filtro</button></a>
++    </form>
++
++    <hr>
++    <table border="1">
++        <thead>
++            <tr>
++                <th>Nome</th>
++                <th>E-mail</th>
++                <th>Papel Atual</th>
++                <th>Status Admin</th>
++                <th>Ações</th>
++            </tr>
++        </thead>
++        <tbody>
++            <tr th:if="${usuarios.empty}">
++                <td colspan="5">Nenhum usuário administrativo encontrado.</td>
++            </tr>
++            <tr th:each="u : ${usuarios}">
++                <td th:text="${u.nome}"></td>
++                <td th:text="${u.email}"></td>
++                <td>
++                    <form action="/usuarios/privilegios" method="post" style="display:inline;">
++                        <input type="hidden" name="usuarioId" th:value="${u.id}">
++                        <select name="papel">
++                            <option value="DIRETOR_GERAL" th:selected="${u.papel == 'DIRETOR_GERAL'}">Diretor Geral</option>
++                            <option value="GESTOR_ADOCAO" th:selected="${u.papel == 'GESTOR_ADOCAO'}">Gestor de Adoção</option>
++                            <option value="ADMIN" th:selected="${u.papel == 'ADMIN'}">Admin</option>
++                        </select>
++                </td>
++                <td>
++                        <select name="statusAdmin">
++                            <option value="ATIVO" th:selected="${u.statusAdmin == 'ATIVO' || u.statusAdmin == null}">Ativo</option>
++                            <option value="DESABILITADO" th:selected="${u.statusAdmin == 'DESABILITADO'}">Desabilitado</option>
++                        </select>
++                </td>
++                <td>
++                        <button type="submit">Salvar</button>
++                    </form>
++                    <form action="/usuarios/excluir" method="post" style="display:inline; margin-left: 5px;">
++                        <input type="hidden" name="usuarioId" th:value="${u.id}">
++                        <button type="submit" onclick="return confirm('Deseja realmente excluir o acesso administrativo permanentemente?');">Excluir Acesso</button>
++                    </form>
++                </td>
++            </tr>
++        </tbody>
++    </table>
++</body>
++</html>
+diff --git a/src/test/java/com/tcc/iterativa/service/UsuarioServiceI5Test.java b/src/test/java/com/tcc/iterativa/service/UsuarioServiceI5Test.java
+new file mode 100644
+index 0000000..e458fe8
+--- /dev/null
++++ b/src/test/java/com/tcc/iterativa/service/UsuarioServiceI5Test.java
+@@ -0,0 +1,59 @@
++package com.tcc.iterativa.service;
++
++import com.tcc.iterativa.model.Usuario;
++import com.tcc.iterativa.repository.UsuarioRepository;
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.context.SpringBootTest;
++
++import java.util.List;
++
++import static org.junit.jupiter.api.Assertions.*;
++
++@SpringBootTest
++class UsuarioServiceI5Test {
++
++    @Autowired
++    private UsuarioService usuarioService;
++
++    @Autowired
++    private UsuarioRepository usuarioRepository;
++
++    @BeforeEach
++    void setUp() {
++        usuarioRepository.deleteAll();
++    }
++
++    @Test
++    void testListarEAlterarPrivilegiosSucesso() throws Exception {
++        Usuario u1 = usuarioService.cadastrar("diretor@dogtech.com", "senha1234", "DIRETOR_GERAL");
++        Usuario u2 = usuarioService.cadastrar("gestor@dogtech.com", "senha1234", "GESTOR_ADOCAO");
++
++        List<Usuario> admins = usuarioService.listarUsuariosAdministrativos(null, null);
++        assertEquals(2, admins.size());
++
++        usuarioService.alterarPrivilegios(u2.getId(), "DIRETOR_GERAL", "ATIVO");
++        Usuario atualizado = usuarioRepository.findById(u2.getId()).get();
++        assertEquals("DIRETOR_GERAL", atualizado.getPapel());
++    }
++
++    @Test
++    void testFiltroUsuariosAdministrativos() throws Exception {
++        usuarioService.cadastrar("carlos@dogtech.com", "senha1234", "DIRETOR_GERAL");
++        usuarioService.cadastrar("ana@dogtech.com", "senha1234", "GESTOR_ADOCAO");
++
++        List<Usuario> filtrados = usuarioService.listarUsuariosAdministrativos("carlos", null);
++        assertEquals(1, filtrados.size());
++        assertEquals("carlos@dogtech.com", filtrados.get(0).getEmail());
++    }
++
++    @Test
++    void testExcluirAcessoAdministrativo() throws Exception {
++        Usuario u = usuarioService.cadastrar("excluir@dogtech.com", "senha1234", "GESTOR_ADOCAO");
++        usuarioService.excluirAcessoAdministrativo(u.getId());
++
++        Usuario uMod = usuarioRepository.findById(u.getId()).get();
++        assertEquals("ADOTANTE", uMod.getPapel());
++    }
++}

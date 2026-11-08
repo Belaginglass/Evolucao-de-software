@@ -1,0 +1,23 @@
+{
+  "id_execucao": "I1-t10-b1ebb75d",
+  "incremento": "I1",
+  "versao_anterior": "V0",
+  "versao_resultante": "V1",
+  "tentativa": 10,
+  "tipo": "correcao",
+  "modelo": "gemini-3.5-flash-lite",
+  "parametros": {
+    "temperature": 0.0,
+    "top_p": null,
+    "top_k": null,
+    "nota_parametros": "top_p/top_k não fixados explicitamente: com temperature=0 a amostragem é determinística (greedy), tornando-os irrelevantes para o resultado; não estimados nem inventados."
+  },
+  "formato_resposta": "json (caminho+conteúdo completo) — não unified diff (ver docstring do script para o motivo da mudança)",
+  "data_hora_inicio": "2026-11-06T01:42:03.476345+00:00",
+  "commit_base": "b4362f835fe9b0ff153148890dcc99ab932afa3f",
+  "data_hora_fim": "2026-11-06T01:42:05.887162+00:00",
+  "sucesso_chamada": false,
+  "erros": [
+    "chamada à API falhou: 503 Server Error: Service Unavailable for url: https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=***REDACTED***"
+  ]
+}

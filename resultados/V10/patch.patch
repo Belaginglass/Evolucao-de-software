@@ -1,0 +1,902 @@
+diff --git a/src/main/java/com/tcc/iterativa/config/SecurityConfig.java b/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+index bc21517..434745f 100644
+--- a/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
++++ b/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+@@ -15,8 +15,8 @@ public class SecurityConfig {
+         http
+             .csrf(csrf -> csrf.disable())
+             .authorizeHttpRequests(auth -> auth
+-                .requestMatchers("/", "/login", "/cadastro", "/recuperar-senha", "/atualizar-senha", "/buscar-cep", "/h2-console/**", "/adote-aqui", "/animais/perfil/**", "/adotados", "/apadrinhamento/causa/**", "/apadrinhamento/financeiro/**").permitAll()
+-                .requestMatchers("/usuarios/gerenciar", "/usuarios/privilegios", "/usuarios/excluir", "/adocoes/fila", "/adocoes/avaliar", "/adocoes/aprovar", "/adocoes/reprovar", "/adocoes/reprovar-todos", "/adocoes/manual", "/adocoes/pos-adocao/gestor/**").hasAnyRole("DIRETOR_GERAL", "GESTOR_ADOCAO")
++                .requestMatchers("/", "/login", "/cadastro", "/recuperar-senha", "/atualizar-senha", "/buscar-cep", "/h2-console/**", "/adote-aqui", "/animais/perfil/**", "/adotados", "/apadrinhamento/causa/**", "/apadrinhamento/financeiro/**", "/eventos/**", "/doacoes/**").permitAll()
++                .requestMatchers("/usuarios/gerenciar", "/usuarios/privilegios", "/usuarios/excluir", "/adocoes/fila", "/adocoes/avaliar", "/adocoes/aprovar", "/adocoes/reprovar", "/adocoes/reprovar-todos", "/adocoes/manual", "/adocoes/pos-adocao/gestor/**", "/eventos/gerenciar/**", "/doacoes/gerenciar/**", "/relatorios/**").hasAnyRole("DIRETOR_GERAL", "GESTOR_ADOCAO")
+                 .requestMatchers("/animais/**", "/baias/**", "/home/sobre-nos", "/home/servicos/**", "/home/campanhas/**", "/home/doacoes/**").hasAnyRole("DIRETOR_GERAL", "GESTOR_ADOCAO")
+                 .anyRequest().authenticated()
+             )
+diff --git a/src/main/java/com/tcc/iterativa/controller/EventoController.java b/src/main/java/com/tcc/iterativa/controller/EventoController.java
+new file mode 100644
+index 0000000..fbe605e
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/controller/EventoController.java
+@@ -0,0 +1,78 @@
++package com.tcc.iterativa.controller;
++
++import com.tcc.iterativa.model.Evento;
++import com.tcc.iterativa.service.EventoDoacaoRelatorioService;
++import org.springframework.security.core.Authentication;
++import org.springframework.stereotype.Controller;
++import org.springframework.ui.Model;
++import org.springframework.web.bind.annotation.GetMapping;
++import org.springframework.web.bind.annotation.PathVariable;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestParam;
++import org.springframework.web.multipart.MultipartFile;
++
++import java.time.LocalDate;
++import java.util.Optional;
++
++@Controller
++public class EventoController {
++
++    private final EventoDoacaoRelatorioService service;
++
++    public EventoController(EventoDoacaoRelatorioService service) {
++        this.service = service;
++    }
++
++    @GetMapping("/eventos")
++    public String listarEventosPublico(Model model) {
++        model.addAttribute("eventos", service.listarEventosPublicos());
++        return "evento/publico";
++    }
++
++    @GetMapping("/eventos/{id}")
++    public String detalheEvento(@PathVariable Long id, Model model) {
++        Optional<Evento> evento = service.buscarEventoPorId(id);
++        if (evento.isEmpty()) return "redirect:/eventos";
++        model.addAttribute("evento", evento.get());
++        return "evento/detalhe";
++    }
++
++    @GetMapping("/eventos/gerenciar")
++    public String gerenciarEventos(Authentication authentication, Model model) {
++        if (authentication == null) return "redirect:/login";
++        model.addAttribute("eventos", service.listarEventosPublicos());
++        return "evento/gerenciar";
++    }
++
++    @PostMapping("/eventos/salvar")
++    public String salvarEvento(
++            Authentication authentication,
++            @RequestParam(required = false) Long id,
++            @RequestParam String nome,
++            @RequestParam LocalDate data,
++            @RequestParam String descricao,
++            @RequestParam(required = false) MultipartFile[] fotosFiles,
++            Model model) {
++        if (authentication == null) return "redirect:/login";
++        try {
++            if (id == null) {
++                service.salvarEvento(nome, data, descricao, fotosFiles);
++                model.addAttribute("sucesso", "Evento criado com sucesso! [PRT-45/46]");
++            } else {
++                service.atualizarEvento(id, nome, data, descricao, fotosFiles);
++                model.addAttribute("sucesso", "Evento atualizado com sucesso!");
++            }
++        } catch (Exception e) {
++            model.addAttribute("erro", e.getMessage());
++        }
++        model.addAttribute("eventos", service.listarEventosPublicos());
++        return "evento/gerenciar";
++    }
++
++    @PostMapping("/eventos/deletar")
++    public String deletarEvento(Authentication authentication, @RequestParam Long id) {
++        if (authentication == null) return "redirect:/login";
++        service.deletarEvento(id);
++        return "redirect:/eventos/gerenciar";
++    }
++}
+diff --git a/src/main/java/com/tcc/iterativa/controller/PedidoDoacaoController.java b/src/main/java/com/tcc/iterativa/controller/PedidoDoacaoController.java
+new file mode 100644
+index 0000000..2833948
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/controller/PedidoDoacaoController.java
+@@ -0,0 +1,79 @@
++package com.tcc.iterativa.controller;
++
++import com.tcc.iterativa.model.PedidoDoacao;
++import com.tcc.iterativa.service.EventoDoacaoRelatorioService;
++import org.springframework.security.core.Authentication;
++import org.springframework.stereotype.Controller;
++import org.springframework.ui.Model;
++import org.springframework.web.bind.annotation.GetMapping;
++import org.springframework.web.bind.annotation.PathVariable;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestParam;
++import org.springframework.web.multipart.MultipartFile;
++
++import java.time.LocalDate;
++import java.util.Optional;
++
++@Controller
++public class PedidoDoacaoController {
++
++    private final EventoDoacaoRelatorioService service;
++
++    public PedidoDoacaoController(EventoDoacaoRelatorioService service) {
++        this.service = service;
++    }
++
++    @GetMapping("/doacoes/pedidos")
++    public String listarPedidosPublico(Model model) {
++        model.addAttribute("pedidos", service.listarPedidosDoacaoPublicos());
++        return "doacao/pedidos-publico";
++    }
++
++    @GetMapping("/doacoes/pedidos/{id}")
++    public String detalhePedido(@PathVariable Long id, Model model) {
++        Optional<PedidoDoacao> pedido = service.buscarPedidoDoacaoPorId(id);
++        if (pedido.isEmpty()) return "redirect:/doacoes/pedidos";
++        model.addAttribute("pedido", pedido.get());
++        return "doacao/detalhe-pedido";
++    }
++
++    @GetMapping("/doacoes/gerenciar")
++    public String gerenciarPedidos(Authentication authentication, Model model) {
++        if (authentication == null) return "redirect:/login";
++        model.addAttribute("pedidos", service.listarPedidosDoacaoPublicos());
++        return "doacao/gerenciar";
++    }
++
++    @PostMapping("/doacoes/gerenciar/salvar")
++    public String salvarPedido(
++            Authentication authentication,
++            @RequestParam(required = false) Long id,
++            @RequestParam String titulo,
++            @RequestParam Double valorSugerido,
++            @RequestParam String descricao,
++            @RequestParam LocalDate dataValidade,
++            @RequestParam(required = false) MultipartFile[] fotosFiles,
++            Model model) {
++        if (authentication == null) return "redirect:/login";
++        try {
++            if (id == null) {
++                service.salvarPedidoDoacao(titulo, valorSugerido, descricao, dataValidade, fotosFiles);
++                model.addAttribute("sucesso", "Pedido de doação criado com sucesso! [PRT-48/49]");
++            } else {
++                service.atualizarPedidoDoacao(id, titulo, valorSugerido, descricao, dataValidade, fotosFiles);
++                model.addAttribute("sucesso", "Pedido de doação atualizado com sucesso!");
++            }
++        } catch (Exception e) {
++            model.addAttribute("erro", e.getMessage());
++        }
++        model.addAttribute("pedidos", service.listarPedidosDoacaoPublicos());
++        return "doacao/gerenciar";
++    }
++
++    @PostMapping("/doacoes/gerenciar/deletar")
++    public String deletarPedido(Authentication authentication, @RequestParam Long id) {
++        if (authentication == null) return "redirect:/login";
++        service.deletarPedidoDoacao(id);
++        return "redirect:/doacoes/gerenciar";
++    }
++}
+diff --git a/src/main/java/com/tcc/iterativa/controller/RelatorioController.java b/src/main/java/com/tcc/iterativa/controller/RelatorioController.java
+new file mode 100644
+index 0000000..9cf91ba
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/controller/RelatorioController.java
+@@ -0,0 +1,24 @@
++package com.tcc.iterativa.controller;
++
++import com.tcc.iterativa.service.EventoDoacaoRelatorioService;
++import org.springframework.security.core.Authentication;
++import org.springframework.stereotype.Controller;
++import org.springframework.ui.Model;
++import org.springframework.web.bind.annotation.GetMapping;
++
++@Controller
++public class RelatorioController {
++
++    private final EventoDoacaoRelatorioService service;
++
++    public RelatorioController(EventoDoacaoRelatorioService service) {
++        this.service = service;
++    }
++
++    @GetMapping("/relatorios")
++    public String telaRelatorios(Authentication authentication, Model model) {
++        if (authentication == null) return "redirect:/login";
++        model.addAttribute("relatorios", service.gerarRelatoriosConsolidados());
++        return "relatorio/index";
++    }
++}
+diff --git a/src/main/java/com/tcc/iterativa/model/Evento.java b/src/main/java/com/tcc/iterativa/model/Evento.java
+new file mode 100644
+index 0000000..1123cd3
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/model/Evento.java
+@@ -0,0 +1,49 @@
++package com.tcc.iterativa.model;
++
++import jakarta.persistence.*;
++import java.time.LocalDate;
++
++@Entity
++@Table(name = "eventos")
++public class Evento {
++
++    @Id
++    @GeneratedValue(strategy = GenerationType.IDENTITY)
++    private Long id;
++
++    @Column(nullable = false)
++    private String nome;
++
++    @Column(nullable = false)
++    private LocalDate data;
++
++    @Column(columnDefinition = "TEXT", nullable = false)
++    private String descricao;
++
++    @Column(columnDefinition = "TEXT")
++    private String fotos;
++
++    public Evento() {}
++
++    public Evento(String nome, LocalDate data, String descricao, String fotos) {
++        this.nome = nome;
++        this.data = data;
++        this.descricao = descricao;
++        this.fotos = fotos;
++    }
++
++    public Long getId() { return id; }
++    public void setId(Long id) { this.id = id; }
++
++    public String getNome() { return nome; }
++    public void setNome(String nome) { this.nome = nome; }
++
++    public LocalDate getData() { return data; }
++    public void setData(LocalDate data) { this.data = data; }
++
++    public String getDescricao() { return descricao; }
++    public void setDescricao(String descricao) { this.descricao = descricao; }
++
++    public String getFotos() { return fotos; }
++    public void setFotos(String fotos) { this.fotos = fotos; }
++}
+diff --git a/src/main/java/com/tcc/iterativa/model/PedidoDoacao.java b/src/main/java/com/tcc/iterativa/model/PedidoDoacao.java
+new file mode 100644
+index 0000000..290b767
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/model/PedidoDoacao.java
+@@ -0,0 +1,55 @@
++package com.tcc.iterativa.model;
++
++import jakarta.persistence.*;
++import java.time.LocalDate;
++
++@Entity
++@Table(name = "pedidos_doacao")
++public class PedidoDoacao {
++
++    @Id
++    @GeneratedValue(strategy = GenerationType.IDENTITY)
++    private Long id;
++
++    @Column(nullable = false)
++    private String titulo;
++
++    @Column(nullable = false)
++    private Double valorSugerido;
++
++    @Column(columnDefinition = "TEXT")
++    private String descricao;
++
++    private LocalDate dataValidade;
++
++    @Column(columnDefinition = "TEXT")
++    private String fotos;
++
++    public PedidoDoacao() {}
++
++    public PedidoDoacao(String titulo, Double valorSugerido, String descricao, LocalDate dataValidade, String fotos) {
++        this.titulo = titulo;
++        this.valorSugerido = valorSugerido;
++        this.descricao = descricao;
++        this.dataValidade = dataValidade;
++        this.fotos = fotos;
++    }
++
++    public Long getId() { return id; }
++    public void setId(Long id) { this.id = id; }
++
++    public String getTitulo() { return titulo; }
++    public void setTitulo(String titulo) { this.titulo = titulo; }
++
++    public Double getValorSugerido() { return valorSugerido; }
++    public void setValorSugerido(Double valorSugerido) { this.valorSugerido = valorSugerido; }
++
++    public String getDescricao() { return descricao; }
++    public void setDescricao(String descricao) { this.descricao = descricao; }
++
++    public LocalDate getDataValidade() { return dataValidade; }
++    public void setDataValidade(LocalDate dataValidade) { this.dataValidade = dataValidade; }
++
++    public String getFotos() { return fotos; }
++    public void setFotos(String fotos) { this.fotos = fotos; }
++}
+diff --git a/src/main/java/com/tcc/iterativa/repository/EventoRepository.java b/src/main/java/com/tcc/iterativa/repository/EventoRepository.java
+new file mode 100644
+index 0000000..f3adb39
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/repository/EventoRepository.java
+@@ -0,0 +1,11 @@
++package com.tcc.iterativa.repository;
++
++import com.tcc.iterativa.model.Evento;
++import org.springframework.data.jpa.repository.JpaRepository;
++import org.springframework.stereotype.Repository;
++import java.util.List;
++
++@Repository
++public interface EventoRepository extends JpaRepository<Evento, Long> {
++    List<Evento> findAllByOrderByDataAsc();
++}
+diff --git a/src/main/java/com/tcc/iterativa/repository/PedidoDoacaoRepository.java b/src/main/java/com/tcc/iterativa/repository/PedidoDoacaoRepository.java
+new file mode 100644
+index 0000000..372cc10
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/repository/PedidoDoacaoRepository.java
+@@ -0,0 +1,11 @@
++package com.tcc.iterativa.repository;
++
++import com.tcc.iterativa.model.PedidoDoacao;
++import org.springframework.data.jpa.repository.JpaRepository;
++import org.springframework.stereotype.Repository;
++import java.util.List;
++
++@Repository
++public interface PedidoDoacaoRepository extends JpaRepository<PedidoDoacao, Long> {
++    List<PedidoDoacao> findAllByOrderByDataValidadeAsc();
++}
+diff --git a/src/main/java/com/tcc/iterativa/service/EventoDoacaoRelatorioService.java b/src/main/java/com/tcc/iterativa/service/EventoDoacaoRelatorioService.java
+new file mode 100644
+index 0000000..4748efe
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/service/EventoDoacaoRelatorioService.java
+@@ -0,0 +1,134 @@
++package com.tcc.iterativa.service;
++
++import com.tcc.iterativa.model.Evento;
++import com.tcc.iterativa.model.PedidoDoacao;
++import com.tcc.iterativa.repository.EventoRepository;
++import com.tcc.iterativa.repository.PedidoDoacaoRepository;
++import com.tcc.iterativa.repository.AnimalRepository;
++import com.tcc.iterativa.repository.AdocaoRepository;
++import com.tcc.iterativa.repository.UsuarioRepository;
++import org.springframework.stereotype.Service;
++import org.springframework.web.multipart.MultipartFile;
++
++import java.time.LocalDate;
++import java.util.Base64;
++import java.util.HashMap;
++import java.util.List;
++import java.util.Map;
++import java.util.Optional;
++import java.util.stream.Collectors;
++
++@Service
++public class EventoDoacaoRelatorioService {
++
++    private final EventoRepository eventoRepository;
++    private final PedidoDoacaoRepository pedidoDoacaoRepository;
++    private final AnimalRepository animalRepository;
++    private final AdocaoRepository adocaoRepository;
++    private final UsuarioRepository usuarioRepository;
++
++    public EventoDoacaoRelatorioService(
++            EventoRepository eventoRepository,
++            PedidoDoacaoRepository pedidoDoacaoRepository,
++            AnimalRepository animalRepository,
++            AdocaoRepository adocaoRepository,
++            UsuarioRepository usuarioRepository) {
++        this.eventoRepository = eventoRepository;
++        this.pedidoDoacaoRepository = pedidoDoacaoRepository;
++        this.animalRepository = animalRepository;
++        this.adocaoRepository = adocaoRepository;
++        this.usuarioRepository = usuarioRepository;
++    }
++
++    public List<Evento> listarEventosPublicos() {
++        return eventoRepository.findAllByOrderByDataAsc();
++    }
++
++    public Optional<Evento> buscarEventoPorId(Long id) {
++        return eventoRepository.findById(id);
++    }
++
++    public Evento salvarEvento(String nome, LocalDate data, String descricao, MultipartFile[] fotosFiles) throws Exception {
++        String fotosStr = processarFotos(fotosFiles);
++        Evento evento = new Evento(nome, data, descricao, fotosStr);
++        return eventoRepository.save(evento);
++    }
++
++    public Evento atualizarEvento(Long id, String nome, LocalDate data, String descricao, MultipartFile[] fotosFiles) throws Exception {
++        Optional<Evento> opt = eventoRepository.findById(id);
++        if (opt.isEmpty()) throw new IllegalArgumentException("Evento não encontrado.");
++        Evento evento = opt.get();
++        evento.setNome(nome);
++        evento.setData(data);
++        evento.setDescricao(descricao);
++        String fotosStr = processarFotos(fotosFiles);
++        if (fotosStr != null) {
++            evento.setFotos(fotosStr);
++        }
++        return eventoRepository.save(evento);
++    }
++
++    public void deletarEvento(Long id) {
++        eventoRepository.deleteById(id);
++    }
++
++    public List<PedidoDoacao> listarPedidosDoacaoPublicos() {
++        return pedidoDoacaoRepository.findAllByOrderByDataValidadeAsc();
++    }
++
++    public Optional<PedidoDoacao> buscarPedidoDoacaoPorId(Long id) {
++        return pedidoDoacaoRepository.findById(id);
++    }
++
++    public PedidoDoacao salvarPedidoDoacao(String titulo, Double valorSugerido, String descricao, LocalDate dataValidade, MultipartFile[] fotosFiles) throws Exception {
++        String fotosStr = processarFotos(fotosFiles);
++        PedidoDoacao pedido = new PedidoDoacao(titulo, valorSugerido, descricao, dataValidade, fotosStr);
++        return pedidoDoacaoRepository.save(pedido);
++    }
++
++    public PedidoDoacao atualizarPedidoDoacao(Long id, String titulo, Double valorSugerido, String descricao, LocalDate dataValidade, MultipartFile[] fotosFiles) throws Exception {
++        Optional<PedidoDoacao> opt = pedidoDoacaoRepository.findById(id);
++        if (opt.isEmpty()) throw new IllegalArgumentException("Pedido de doação não encontrado.");
++        PedidoDoacao pedido = opt.get();
++        pedido.setTitulo(titulo);
++        pedido.setValorSugerido(valorSugerido);
++        pedido.setDescricao(descricao);
++        pedido.setDataValidade(dataValidade);
++        String fotosStr = processarFotos(fotosFiles);
++        if (fotosStr != null) {
++            pedido.setFotos(fotosStr);
++        }
++        return pedidoDoacaoRepository.save(pedido);
++    }
++
++    public void deletarPedidoDoacao(Long id) {
++        pedidoDoacaoRepository.deleteById(id);
++    }
++
++    public Map<String, Object> gerarRelatoriosConsolidados() {
++        Map<String, Object> relatorios = new HashMap<>();
++        relatorios.put("totalAnimais", animalRepository.count());
++        relatorios.put("totalAdocoes", adocaoRepository.count());
++        relatorios.put("totalUsuarios", usuarioRepository.count());
++        relatorios.put("totalEventos", eventoRepository.count());
++        relatorios.put("totalPedidosDoacao", pedidoDoacaoRepository.count());
++        
++        Map<String, Long> adocoesPorEstado = adocaoRepository.findAll().stream()
++            .collect(Collectors.groupingBy(a -> a.getEstado() != null ? a.getEstado() : "DESCONHECIDO", Collectors.counting()));
++        relatorios.put("adocoesPorEstado", adocoesPorEstado);
++        
++        return relatorios;
++    }
++
++    private String processarFotos(MultipartFile[] fotosFiles) throws Exception {
++        if (fotosFiles == null || fotosFiles.length == 0) return null;
++        StringBuilder sb = new StringBuilder();
++        for (MultipartFile f : fotosFiles) {
++            if (f != null && !f.isEmpty()) {
++                if (sb.length() > 0) sb.append(";");
++                sb.append(Base64.getEncoder().encodeToString(f.getBytes()));
++            }
++        }
++        return sb.length() > 0 ? sb.toString() : null;
++    }
++}
+diff --git a/src/main/resources/templates/doacao/detalhe-pedido.html b/src/main/resources/templates/doacao/detalhe-pedido.html
+new file mode 100644
+index 0000000..58728ce
+--- /dev/null
++++ b/src/main/resources/templates/doacao/detalhe-pedido.html
+@@ -0,0 +1,24 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Detalhe Pedido Doação [PRT-50]</title>
++</head>
++<body>
++    <h2>DogTech - Pedido: <span th:text="${pedido.titulo}"></span> [PRT-50] (UC013)</h2>
++    <p><a href="/doacoes/pedidos">Voltar para Pedidos de Doação</a></p>
++
++    <p><strong>Valor Sugerido:</strong> R$ <span th:text="${pedido.valorSugerido}"></span></p>
++    <p><strong>Validade:</strong> <span th:text="${pedido.dataValidade}"></span></p>
++    <p><strong>Descrição:</strong> <span th:text="${pedido.descricao}"></span></p>
++
++    <div th:if="${pedido.fotos != null}">
++        <h3>Fotos Anexadas</h3>
++        <div th:each="foto : ${pedido.fotos.split(';')}">
++            <img th:src="'data:image/jpeg;base64,' + ${foto}" width="250" style="margin:5px;"/>
++        </div>
++    </div>
++    <br>
++    <p><a href="/apadrinhamento/financeiro"><button>Realizar Doação [RF013]</button></a></p>
++</body>
++</html>
+diff --git a/src/main/resources/templates/doacao/gerenciar.html b/src/main/resources/templates/doacao/gerenciar.html
+new file mode 100644
+index 0000000..b35a79e
+--- /dev/null
++++ b/src/main/resources/templates/doacao/gerenciar.html
+@@ -0,0 +1,74 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Gerenciamento de Doações [PRT-48]</title>
++</head>
++<body>
++    <h2>DogTech - Gerenciamento de Pedidos de Doação [PRT-48] (UC013)</h2>
++    <p><a href="/home-admin">Voltar</a></p>
++
++    <div th:if="${erro}" style="color: red;"><p th:text="${erro}"></p></div>
++    <div th:if="${sucesso}" style="color: green;"><p th:text="${sucesso}"></p></div>
++
++    <h3>Criar / Editar Pedido de Doação</h3>
++    <form action="/doacoes/gerenciar/salvar" method="post" enctype="multipart/form-data">
++        <input type="hidden" name="id" id="pedidoId">
++        <label>Título da Campanha: <span title="Título da necessidade de doação">?</span></label>
++        <input type="text" name="titulo" id="pedidoTitulo" required><br><br>
++
++        <label>Valor Sugerido (R$):</label>
++        <input type="number" step="0.01" name="valorSugerido" id="pedidoValor" required><br><br>
++
++        <label>Data de Validade:</label>
++        <input type="date" name="dataValidade" id="pedidoValidade" required><br><br>
++
++        <label>Descrição:</label>
++        <textarea name="descricao" id="pedidoDescricao" required></textarea><br><br>
++
++        <label>Fotos (Adicionar fotos com legenda/opção de envio):</label>
++        <input type="file" name="fotosFiles" accept=".jpg,.jpeg,.png" multiple><br><br>
++
++        <button type="submit">Salvar Pedido [PRT-48]</button>
++    </form>
++
++    <hr>
++    <h3>Pedidos Cadastrados</h3>
++    <table border="1">
++        <thead>
++            <tr>
++                <th>ID</th>
++                <th>Título</th>
++                <th>Valor Sugerido</th>
++                <th>Validade</th>
++                <th>Ações</th>
++            </tr>
++        </thead>
++        <tbody>
++            <tr th:each="p : ${pedidos}">
++                <td th:text="${p.id}"></td>
++                <td th:text="${p.titulo}"></td>
++                <td th:text="${p.valorSugerido}"></td>
++                <td th:text="${p.dataValidade}"></td>
++                <td>
++                    <button type="button" th:onclick="preencherEdicaoPedido([[${p.id}]], [[${p.titulo}]], [[${p.valorSugerido}]], [[${p.dataValidade}]], [[${p.descricao}]])">Editar</button>
++                    <form action="/doacoes/gerenciar/deletar" method="post" style="display:inline; margin-left:5px;">
++                        <input type="hidden" name="id" th:value="${p.id}">
++                        <button type="submit" onclick="return confirm('Confirmar exclusão?');">Excluir (x)</button>
++                    </form>
++                </td>
++            </tr>
++        </tbody>
++    </table>
++    <script>
++        function preencherEdicaoPedido(id, titulo, valor, validade, desc) {
++            document.getElementById('pedidoId').value = id;
++            document.getElementById('pedidoTitulo').value = titulo;
++            document.getElementById('pedidoValor').value = valor;
++            document.getElementById('pedidoValidade').value = validade;
++            document.getElementById('pedidoDescricao').value = desc;
++            window.scrollTo(0,0);
++        }
++    </script>
++</body>
++</html>
+diff --git a/src/main/resources/templates/doacao/pedidos-publico.html b/src/main/resources/templates/doacao/pedidos-publico.html
+new file mode 100644
+index 0000000..f7ae343
+--- /dev/null
++++ b/src/main/resources/templates/doacao/pedidos-publico.html
+@@ -0,0 +1,24 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Pedidos de Doação [PRT-49]</title>
++</head>
++<body>
++    <h2>DogTech - Campanhas e Pedidos de Doação [PRT-49] (UC013)</h2>
++    <p><a href="/">Página Inicial</a> | <a href="/eventos">Eventos [PRT-46]</a> | <a href="/apadrinhamento/financeiro">Doação Monetária (Boleto) [PRT-29]</a></p>
++
++    <div th:if="${pedidos.empty}">
++        <p>Nenhum pedido de doação ativo no momento.</p>
++    </div>
++
++    <div th:each="p : ${pedidos}" style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
++        <h3 th:text="${p.titulo}"></h3>
++        <p><strong>Valor Sugerido:</strong> R$ <span th:text="${p.valorSugerido}"></span></p>
++        <p><strong>Validade:</strong> <span th:text="${p.dataValidade}"></span></p>
++        <p><strong>Descrição:</strong> <span th:text="${p.descricao}"></span></p>
++        <p><a th:href="@{'/doacoes/pedidos/' + ${p.id}}"><button>Saiba Mais / Fotos [PRT-50]</button></a></p>
++        <p><a href="/apadrinhamento/financeiro"><button>Doar Agora (Boleto) [RF013]</button></a></p>
++    </div>
++</body>
++</html>
+diff --git a/src/main/resources/templates/evento/detalhe.html b/src/main/resources/templates/evento/detalhe.html
+new file mode 100644
+index 0000000..97236f3
+--- /dev/null
++++ b/src/main/resources/templates/evento/detalhe.html
+@@ -0,0 +1,21 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Detalhe do Evento [PRT-47]</title>
++</head>
++<body>
++    <h2>DogTech - Evento: <span th:text="${evento.nome}"></span> [PRT-47] (UC012)</h2>
++    <p><a href="/eventos">Voltar para Eventos</a></p>
++
++    <p><strong>Data:</strong> <span th:text="${evento.data}"></span></p>
++    <p><strong>Descrição:</strong> <span th:text="${evento.descricao}"></span></p>
++
++    <div th:if="${evento.fotos != null}">
++        <h3>Fotos</h3>
++        <div th:each="foto : ${evento.fotos.split(';')}">
++            <img th:src="'data:image/jpeg;base64,' + ${foto}" width="250" style="margin:5px;"/>
++        </div>
++    </div>
++</body>
++</html>
+diff --git a/src/main/resources/templates/evento/gerenciar.html b/src/main/resources/templates/evento/gerenciar.html
+new file mode 100644
+index 0000000..9c2dec8
+--- /dev/null
++++ b/src/main/resources/templates/evento/gerenciar.html
+@@ -0,0 +1,68 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Gerenciamento de Eventos [PRT-45]</title>
++</head>
++<body>
++    <h2>DogTech - Gerenciamento de Eventos [PRT-45] (UC012)</h2>
++    <p><a href="/home-admin">Voltar</a></p>
++
++    <div th:if="${erro}" style="color: red;"><p th:text="${erro}"></p></div>
++    <div th:if="${sucesso}" style="color: green;"><p th:text="${sucesso}"></p></div>
++
++    <h3>Criar / Editar Evento</h3>
++    <form action="/eventos/salvar" method="post" enctype="multipart/form-data">
++        <input type="hidden" name="id" id="eventoId">
++        <label>Nome do Evento: <span title="Nome descritivo">?</span></label>
++        <input type="text" name="nome" id="eventoNome" required><br><br>
++
++        <label>Data:</label>
++        <input type="date" name="data" id="eventoData" required><br><br>
++
++        <label>Descrição:</label>
++        <textarea name="descricao" id="eventoDescricao" required></textarea><br><br>
++
++        <label>Fotos (Adicionar fotos com legenda/incorporação):</label>
++        <input type="file" name="fotosFiles" accept=".jpg,.jpeg,.png" multiple><br><br>
++
++        <button type="submit">Salvar Evento [PRT-45]</button>
++    </form>
++
++    <hr>
++    <h3>Eventos Cadastrados</h3>
++    <table border="1">
++        <thead>
++            <tr>
++                <th>ID</th>
++                <th>Nome</th>
++                <th>Data</th>
++                <th>Ações</th>
++            </tr>
++        </thead>
++        <tbody>
++            <tr th:each="ev : ${eventos}">
++                <td th:text="${ev.id}"></td>
++                <td th:text="${ev.nome}"></td>
++                <td th:text="${ev.data}"></td>
++                <td>
++                    <button type="button" th:onclick="preencherEdicion([[${ev.id}]], [[${ev.nome}]], [[${ev.data}]], [[${ev.descricao}]])">Editar</button>
++                    <form action="/eventos/deletar" method="post" style="display:inline; margin-left:5px;">
++                        <input type="hidden" name="id" th:value="${ev.id}">
++                        <button type="submit" onclick="return confirm('Confirmar exclusão?');">Excluir (x)</button>
++                    </form>
++                </td>
++            </tr>
++        </tbody>
++    </table>
++    <script>
++        function preencherEdicion(id, nome, data, desc) {
++            document.getElementById('eventoId').value = id;
++            document.getElementById('eventoNome').value = nome;
++            document.getElementById('eventoData').value = data;
++            document.getElementById('eventoDescricao').value = desc;
++            window.scrollTo(0,0);
++        }
++    </script>
++</body>
++</html>
+diff --git a/src/main/resources/templates/evento/publico.html b/src/main/resources/templates/evento/publico.html
+new file mode 100644
+index 0000000..543b595
+--- /dev/null
++++ b/src/main/resources/templates/evento/publico.html
+@@ -0,0 +1,22 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Eventos [PRT-46]</title>
++</head>
++<body>
++    <h2>DogTech - Próximos Eventos [PRT-46] (UC012)</h2>
++    <p><a href="/">Página Inicial</a> | <a href="/doacoes/pedidos">Pedidos de Doação [PRT-49]</a></p>
++
++    <div th:if="${eventos.empty}">
++        <p>Nenhum evento agendado no momento.</p>
++    </div>
++
++    <div th:each="ev : ${eventos}" style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
++        <h3 th:text="${ev.nome}"></h3>
++        <p><strong>Data:</strong> <span th:text="${ev.data}"></span></p>
++        <p><strong>Descrição:</strong> <span th:text="${ev.descricao}"></span></p>
++        <p><a th:href="@{'/eventos/' + ${ev.id}}"><button>Saiba Mais [PRT-47]</button></a></p>
++    </div>
++</body>
++</html>
+diff --git a/src/main/resources/templates/home/admin.html b/src/main/resources/templates/home/admin.html
+index 1de429a..c9e3846 100644
+--- a/src/main/resources/templates/home/admin.html
++++ b/src/main/resources/templates/home/admin.html
+@@ -10,6 +10,9 @@
+     <p><a href="/meus-dados">Meus Dados (UC011)</a></p>
+     <p><a href="/animais/novo">Cadastrar Animal (UC003 / RF002)</a></p>
+     <p><a href="/baias">Gerenciar Baias (RF008)</a></p>
++    <p><a href="/eventos/gerenciar">Gerenciar Eventos (UC012) [PRT-45]</a></p>
++    <p><a href="/doacoes/gerenciar">Gerenciar Pedidos de Doação (UC013) [PRT-48]</a></p>
++    <p><a href="/relatorios">Relatórios Gerenciais (UC014) [PRT-51]</a></p>
+     <p th:if="${#authorization.expression('hasRole("DIRETOR_GERAL")')}"><a href="/usuarios/gerenciar">Gerenciar Atores / Privilégios [PRT-10] (UC004)</a></p>
+     <hr>
+     <h3>Gerenciamento da Página Inicial (UC009)</h3>
+diff --git a/src/main/resources/templates/index.html b/src/main/resources/templates/index.html
+index 8a2f283..70bfbdf 100644
+--- a/src/main/resources/templates/index.html
++++ b/src/main/resources/templates/index.html
+@@ -9,7 +9,9 @@
+     <p>
+         <a href="/login">Entrar / Cadastrar</a> |
+         <a href="/adote-aqui">Adote Aqui [PRT-11]</a> |
+-        <a href="/adotados">Adotados / Relatos [PRT-42]</a>
++        <a href="/adotados">Adotados / Relatos [PRT-42]</a> |
++        <a href="/eventos">Eventos [PRT-46]</a> |
++        <a href="/doacoes/pedidos">Doações [PRT-49]</a>
+     </p>
+ 
+     <hr>
+diff --git a/src/main/resources/templates/relatorio/index.html b/src/main/resources/templates/relatorio/index.html
+new file mode 100644
+index 0000000..0d1df32
+--- /dev/null
++++ b/src/main/resources/templates/relatorio/index.html
+@@ -0,0 +1,29 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Relatórios Gerenciais [PRT-51]</title>
++</head>
++<body>
++    <h2>DogTech - Tela de Relatórios Gerenciais [PRT-51] (UC014)</h2>
++    <p><a href="/home-admin">Voltar</a></p>
++
++    <div style="border:1px solid #ccc; padding:15px; margin-bottom:15px;">
++        <h3>Dados Agregados do Sistema</h3>
++        <ul>
++            <li><strong>Total de Animais Cadastrados:</strong> <span th:text="${relatorios.totalAnimais}"></span></li>
++            <li><strong>Total de Pedidos de Adoção:</strong> <span th:text="${relatorios.totalAdocoes}"></span></li>
++            <li><strong>Total de Usuários Registrados:</strong> <span th:text="${relatorios.totalUsuarios}"></span></li>
++            <li><strong>Total de Eventos Cadastrados:</strong> <span th:text="${relatorios.totalEventos}"></span></li>
++            <li><strong>Total de Campanhas/Pedidos de Doação:</strong> <span th:text="${relatorios.totalPedidosDoacao}"></span></li>
++        </ul>
++
++        <h3>Adoções por Estado</h3>
++        <ul>
++            <li th:each="entry : ${relatorios.adocoesPorEstado}">
++                <strong th:text="${entry.key}"></strong>: <span th:text="${entry.value}"></span>
++            </li>
++        </ul>
++    </div>
++</body>
++</html>
+diff --git a/src/test/java/com/tcc/iterativa/service/EventoDoacaoRelatorioServiceTest.java b/src/test/java/com/tcc/iterativa/service/EventoDoacaoRelatorioServiceTest.java
+new file mode 100644
+index 0000000..10ae666
+--- /dev/null
++++ b/src/test/java/com/tcc/iterativa/service/EventoDoacaoRelatorioServiceTest.java
+@@ -0,0 +1,59 @@
++package com.tcc.iterativa.service;
++
++import com.tcc.iterativa.model.Evento;
++import com.tcc.iterativa.model.PedidoDoacao;
++import com.tcc.iterativa.repository.EventoRepository;
++import com.tcc.iterativa.repository.PedidoDoacaoRepository;
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.context.SpringBootTest;
++import org.springframework.transaction.annotation.Transactional;
++
++import java.time.LocalDate;
++import java.util.Map;
++
++import static org.junit.jupiter.api.Assertions.*;
++
++@SpringBootTest
++@Transactional
++class EventoDoacaoRelatorioServiceTest {
++
++    @Autowired
++    private EventoDoacaoRelatorioService service;
++
++    @Autowired
++    private EventoRepository eventoRepository;
++
++    @Autowired
++    private PedidoDoacaoRepository pedidoDoacaoRepository;
++
++    @BeforeEach
++    void setUp() {
++        eventoRepository.deleteAll();
++        pedidoDoacaoRepository.deleteAll();
++    }
++
++    @Test
++    void testCriarEListarEventoSucesso() throws Exception {
++        Evento ev = service.salvarEvento("Feira de Adoção", LocalDate.now().plusDays(5), "Feira no parque", null);
++        assertNotNull(ev.getId());
++        assertEquals(1, service.listarEventosPublicos().size());
++    }
++
++    @Test
++    void testCriarEListarPedidoDoacaoSucesso() throws Exception {
++        PedidoDoacao pd = service.salvarPedidoDoacao("Ração para cães", 50.0, "Precisamos de ração", LocalDate.now().plusDays(10), null);
++        assertNotNull(pd.getId());
++        assertEquals(1, service.listarPedidosDoacaoPublicos().size());
++    }
++
++    @Test
++    void testGerarRelatoriosConsolidados() {
++        Map<String, Object> relatorios = service.gerarRelatoriosConsolidados();
++        assertNotNull(relatorios);
++        assertTrue(relatorios.containsKey("totalAnimais"));
++        assertTrue(relatorios.containsKey("totalAdocoes"));
++        assertTrue(relatorios.containsKey("adocoesPorEstado"));
++    }
++}

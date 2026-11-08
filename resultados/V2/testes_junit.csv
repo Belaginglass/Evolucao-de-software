@@ -1,0 +1,9 @@
+classe,metodo,situacao,tempo_s,mensagem_erro
+com.tcc.iterativa.GeracaoIterativaApplicationTests,contextLoads,Aprovado,0.695,
+com.tcc.iterativa.service.UsuarioServiceI2Test,testBuscaCepLocal,Aprovado,0.437,
+com.tcc.iterativa.service.UsuarioServiceI2Test,testAtualizarDadosPessoais,Aprovado,0.154,
+com.tcc.iterativa.service.UsuarioServiceI2Test,testCadastroFalhaSemTelefone,Aprovado,0.022,
+com.tcc.iterativa.service.UsuarioServiceI2Test,testCadastroCompletoSucesso,Aprovado,0.025,
+com.tcc.iterativa.service.UsuarioServiceTest,testCadastroESucessoAutenticacao,Aprovado,0.046,
+com.tcc.iterativa.service.UsuarioServiceTest,testCadastroFalhaFormatoEmail,Aprovado,0.021,
+com.tcc.iterativa.service.UsuarioServiceTest,testRecuperacaoSenha,Aprovado,0.071,

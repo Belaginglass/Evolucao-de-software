@@ -1,0 +1,33 @@
+INCREMENTO I2 — Cadastro e manutenção de usuários
+
+Implemente os casos de uso UC002 (Cadastro) e UC011 (Manter cadastro), descritos em
+detalhe no bloco "REQUISITOS DO INCREMENTO I2" desta mesma solicitação, e nenhuma
+outra funcionalidade. O projeto já tem, do Incremento I1 (autenticação): uma
+entidade `Usuario` (com e-mail, senha com hash, salt, papel), `UsuarioService`,
+`UsuarioRepository`, `AuthController`, `PasswordUtils`, `SecurityConfig`. Não
+recrie essas classes do zero — ESTENDA-as com o que falta para o cadastro completo
+(RN002) e a atualização de dados pessoais (UC011).
+
+Lembre-se, em especial (ver Apêndice C para o texto completo de cada item):
+- C.2: a busca de CEP (RNF002) deve consultar o arquivo local
+  `src/main/resources/ceps.csv` (colunas: cep, rua, bairro, cidade, estado — cep com
+  8 dígitos, sem hífen), carregado do classpath, nunca uma API HTTP externa.
+- C.4: o documento original cita "UC02 e UC04" para a busca de CEP; implemente a
+  busca de CEP apenas no cadastro (UC002/UC011), que é onde há campos de endereço —
+  não adicione busca de CEP em nenhuma tela de UC004 (isso só será implementado,
+  se for o caso, no Incremento I5, e apenas se fizer sentido lá).
+
+Campos obrigatórios do cadastro (RN002): nome, e-mail, senha (≥8 caracteres), CPF,
+data de nascimento, ao menos um telefone (com indicação de WhatsApp e identificação
+do número), endereço completo (rua, número, complemento, bairro, cidade, estado,
+CEP — preenchido via consulta ao ceps.csv), foto (aceitar JPG/PNG, gerar miniatura),
+e indicação de interesse em ser voluntário. E-mail e CPF devem ser únicos no sistema.
+
+A entidade `Usuario` atual (de I1) só tem e-mail/senha/salt/papel — adicione os
+campos que faltam para RN002 diretamente nela (nome, CPF, dataNascimento, endereco,
+foto, voluntario, telefones), sem criar uma segunda entidade de usuário paralela.
+
+Para UC011 (Manter cadastro — RN011): usuário autenticado altera seus próprios
+dados; ao salvar, gere um hash (UUID) de confirmação, registre a data da alteração,
+e simule o envio do e-mail de segurança (como no fluxo de recuperação de senha de
+I1, pode ser uma mensagem na tela com o link, sem envio real de e-mail).

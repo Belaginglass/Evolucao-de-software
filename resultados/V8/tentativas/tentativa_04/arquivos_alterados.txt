@@ -1,0 +1,12 @@
+Modificado	src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+Modificado	src/main/java/com/tcc/iterativa/controller/AdocaoController.java
+Modificado	src/main/java/com/tcc/iterativa/model/Adocao.java
+Modificado	src/main/java/com/tcc/iterativa/model/Usuario.java
+Modificado	src/main/java/com/tcc/iterativa/service/AdocaoService.java
+Criado	src/main/resources/templates/adocao/adotados-publicos.html
+Modificado	src/main/resources/templates/adocao/minhas-adocoes.html
+Criado	src/main/resources/templates/adocao/pos-adocao-gestor.html
+Modificado	src/main/resources/templates/home/admin.html
+Modificado	src/main/resources/templates/home/adotante.html
+Modificado	src/main/resources/templates/index.html
+Criado	src/test/java/com/tcc/iterativa/service/AdocaoServiceI8Test.java

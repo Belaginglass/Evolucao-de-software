@@ -1,0 +1,29 @@
+INCREMENTO I9 — Apadrinhamento de animais e causas
+
+Implemente os casos de uso UC007 (Apadrinhamento de causa) e UC008
+(Apadrinhamento de animal), descritos em detalhe no bloco "REQUISITOS DO
+INCREMENTO I9" desta mesma solicitação, e nenhuma outra funcionalidade.
+
+UC007 é simples: um link cadastrado pelo Diretor Geral (reaproveite o padrão
+de ConteudoHome de I4 — pode ser um novo tipo de item, "CAUSA", com
+título/descrição/link) que abre em outra janela.
+
+UC008 (apadrinhamento de animal, por serviço ou apoio financeiro) é o foco
+principal deste incremento:
+- Qualquer usuário autenticado pode apadrinhar um animal/serviço, escolhendo
+  dia/horário de disponibilidade para prestação de serviço (crie uma entidade
+  simples, ex.: Apadrinhamento, com animal, adotante, tipo de serviço, dia,
+  horário, status).
+- Doação pontual/mensal: gere um "boleto" simulado (não precisa integração
+  bancária real — apenas um identificador/texto representando o boleto) para
+  apadrinhamento financeiro; funcionalidade pública, não exige cadastro
+  (reaproveite dados do usuário se ele estiver autenticado).
+- RN009 (gerência de agendas): quando um animal recebe uma proposta de
+  prestação de serviço, é esse o momento de criar a "agenda" dele (pode ser
+  simplificado como uma lista de horários vinculados ao animal) — não é
+  necessário integrar com um serviço de calendário externo real, apenas
+  modelar a agenda dentro do próprio sistema.
+
+Lembre-se das lições anteriores: não use @Lob/BLOB; restrinja rotas
+administrativas; a geração de boleto deve funcionar para visitante não
+autenticado (adicione a rota ao permitAll do SecurityConfig).

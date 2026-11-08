@@ -1,0 +1,14 @@
+Modificado	src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+Criado	src/main/java/com/tcc/iterativa/controller/AdocaoController.java
+Criado	src/main/java/com/tcc/iterativa/model/Adocao.java
+Criado	src/main/java/com/tcc/iterativa/repository/AdocaoRepository.java
+Criado	src/main/java/com/tcc/iterativa/service/AdocaoService.java
+Criado	src/main/resources/templates/adocao/fila.html
+Criado	src/main/resources/templates/adocao/lista-animais.html
+Criado	src/main/resources/templates/adocao/minhas-adocoes.html
+Criado	src/main/resources/templates/adocao/perfil-animal.html
+Criado	src/main/resources/templates/adocao/termo.html
+Modificado	src/main/resources/templates/home/admin.html
+Modificado	src/main/resources/templates/home/adotante.html
+Modificado	src/main/resources/templates/index.html
+Criado	src/test/java/com/tcc/iterativa/service/AdocaoServiceI6Test.java

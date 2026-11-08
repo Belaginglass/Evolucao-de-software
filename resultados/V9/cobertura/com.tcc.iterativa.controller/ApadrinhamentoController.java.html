@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="pt"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApadrinhamentoController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">geracao-iterativa</a> &gt; <a href="index.source.html" class="el_package">com.tcc.iterativa.controller</a> &gt; <span class="el_source">ApadrinhamentoController.java</span></div><h1>ApadrinhamentoController.java</h1><pre class="source lang-java linenums">package com.tcc.iterativa.controller;
+
+import com.tcc.iterativa.model.Apadrinhamento;
+import com.tcc.iterativa.model.DoacaoFinanceira;
+import com.tcc.iterativa.model.Animal;
+import com.tcc.iterativa.service.AdocaoService;
+import com.tcc.iterativa.service.ApadrinhamentoService;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.Optional;
+
+@Controller
+public class ApadrinhamentoController {
+
+    private final ApadrinhamentoService apadrinhamentoService;
+    private final AdocaoService adocaoService;
+
+<span class="fc" id="L26">    public ApadrinhamentoController(ApadrinhamentoService apadrinhamentoService, AdocaoService adocaoService) {</span>
+<span class="fc" id="L27">        this.apadrinhamentoService = apadrinhamentoService;</span>
+<span class="fc" id="L28">        this.adocaoService = adocaoService;</span>
+<span class="fc" id="L29">    }</span>
+
+    @GetMapping(&quot;/apadrinhamento/causa/{id}&quot;)
+    public String apadrinhamentoCausaExterna(@PathVariable Long id) {
+        // UC007: Direciona para link externo cadastrado
+<span class="nc" id="L34">        return &quot;redirect:https://example.com/projeto-causa-&quot; + id;</span>
+    }
+
+    @GetMapping(&quot;/apadrinhamento/animal/{id}&quot;)
+    public String apadrinhamentoAnimalForm(@PathVariable Long id, Model model, Authentication authentication) {
+<span class="nc" id="L39">        Optional&lt;Animal&gt; animalOpt = adocaoService.buscarAnimalPorId(id);</span>
+<span class="nc bnc" id="L40" title="All 2 branches missed.">        if (animalOpt.isEmpty()) {</span>
+<span class="nc" id="L41">            return &quot;redirect:/adote-aqui&quot;;</span>
+        }
+<span class="nc" id="L43">        model.addAttribute(&quot;animal&quot;, animalOpt.get());</span>
+<span class="nc bnc" id="L44" title="All 2 branches missed.">        model.addAttribute(&quot;autenticado&quot;, authentication != null);</span>
+<span class="nc" id="L45">        return &quot;apadrinhamento/animal&quot;;</span>
+    }
+
+    @PostMapping(&quot;/apadrinhamento/animal&quot;)
+    public String solicitarApadrinhamentoAnimal(
+            @RequestParam Long animalId,
+            @RequestParam String tipoServico,
+            @RequestParam LocalDate dia,
+            @RequestParam LocalTime horario,
+            Authentication authentication,
+            Model model) {
+<span class="nc bnc" id="L56" title="All 2 branches missed.">        if (authentication == null) {</span>
+<span class="nc" id="L57">            return &quot;redirect:/login?redirect=/apadrinhamento/animal/&quot; + animalId;</span>
+        }
+        try {
+<span class="nc" id="L60">            apadrinhamentoService.criarApadrinhamentoServico(animalId, authentication.getName(), tipoServico, dia, horario);</span>
+<span class="nc" id="L61">            model.addAttribute(&quot;sucesso&quot;, &quot;Pedido de apadrinhamento e prestação de serviço cadastrado com sucesso! Agenda criada [RN009].&quot;);</span>
+<span class="nc" id="L62">        } catch (Exception e) {</span>
+<span class="nc" id="L63">            model.addAttribute(&quot;erro&quot;, e.getMessage());</span>
+<span class="nc" id="L64">        }</span>
+<span class="nc" id="L65">        Optional&lt;Animal&gt; animalOpt = adocaoService.buscarAnimalPorId(animalId);</span>
+<span class="nc" id="L66">        animalOpt.ifPresent(a -&gt; model.addAttribute(&quot;animal&quot;, a));</span>
+<span class="nc" id="L67">        model.addAttribute(&quot;autenticado&quot;, true);</span>
+<span class="nc" id="L68">        return &quot;apadrinhamento/animal&quot;;</span>
+    }
+
+    @GetMapping(&quot;/apadrinhamento/financeiro&quot;)
+    public String doacaoFinanceiraForm(Authentication authentication, Model model) {
+<span class="nc bnc" id="L73" title="All 2 branches missed.">        model.addAttribute(&quot;autenticado&quot;, authentication != null);</span>
+<span class="nc" id="L74">        return &quot;apadrinhamento/financeiro&quot;;</span>
+    }
+
+    @PostMapping(&quot;/apadrinhamento/financeiro&quot;)
+    public String gerarBoleto(
+            @RequestParam(required = false) String nome,
+            @RequestParam(required = false) String email,
+            @RequestParam Double valor,
+            @RequestParam String frequencia,
+            Authentication authentication,
+            Model model) {
+<span class="nc bnc" id="L85" title="All 2 branches missed.">        String emailLogado = authentication != null ? authentication.getName() : null;</span>
+<span class="nc" id="L86">        DoacaoFinanceira doacao = apadrinhamentoService.gerarBoletoDoacao(nome, email, valor, frequencia, emailLogado);</span>
+<span class="nc" id="L87">        model.addAttribute(&quot;doacao&quot;, doacao);</span>
+<span class="nc" id="L88">        model.addAttribute(&quot;sucesso&quot;, &quot;Boleto gerado com sucesso [FA-16]!&quot;);</span>
+<span class="nc" id="L89">        return &quot;apadrinhamento/boleto&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

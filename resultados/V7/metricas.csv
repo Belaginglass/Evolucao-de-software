@@ -1,0 +1,14 @@
+metrica,valor,situacao,justificativa
+LOC (ncloc),1674,Coletado,
+Complexidade ciclomática,406,Coletado,
+Complexidade cognitiva,204,Coletado,
+Duplicação (duplicated_lines_density %),0.0,Coletado,
+Code smells,2,Coletado,
+Cobertura (coverage %),45.4,Coletado,
+WMC (soma por classe),443.0,Coletado,33 classes analisadas pelo CK
+CBO (média por classe),6.58,Coletado,
+LCOM (média por classe),59.24,Coletado,
+Testes executados,23,Coletado,
+Testes aprovados,23,Coletado,
+Testes reprovados,0,Coletado,
+Taxa de aprovação (testes JUnit automatizados — auxiliar),100.0,Coletado,

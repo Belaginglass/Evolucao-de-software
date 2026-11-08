@@ -1,0 +1,14 @@
+Modificado	src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+Criado	src/main/java/com/tcc/iterativa/controller/AnimalController.java
+Criado	src/main/java/com/tcc/iterativa/controller/BaiaController.java
+Criado	src/main/java/com/tcc/iterativa/model/Animal.java
+Criado	src/main/java/com/tcc/iterativa/model/Baia.java
+Criado	src/main/java/com/tcc/iterativa/repository/AnimalRepository.java
+Criado	src/main/java/com/tcc/iterativa/repository/BaiaRepository.java
+Criado	src/main/java/com/tcc/iterativa/service/AnimalService.java
+Criado	src/main/java/com/tcc/iterativa/service/BaiaService.java
+Criado	src/main/resources/templates/animal/cadastro.html
+Criado	src/main/resources/templates/baia/cadastro.html
+Criado	src/main/resources/templates/baia/lista.html
+Modificado	src/main/resources/templates/home/admin.html
+Criado	src/test/java/com/tcc/iterativa/service/AnimalServiceI3Test.java

@@ -1,0 +1,30 @@
+INCREMENTO I7 — Avaliação e aprovação de adoções
+
+Implemente o caso de uso UC006 (Avaliar adoção), descrito em detalhe no bloco
+"REQUISITOS DO INCREMENTO I7" desta mesma solicitação, e nenhuma outra
+funcionalidade. Use a entidade Adocao já existente (I6).
+
+Funcionalidades (restritas a GESTOR_ADOCAO/DIRETOR_GERAL):
+- Listar a fila de pedidos de adoção (estado AGUARDANDO), agrupados por animal
+  (RN008) — pode reutilizar/estender a tela de fila já criada em I6.
+- Aprovar um pedido: muda o estado para "AGUARDANDO_VISITA" (RN004/RN016); ao
+  aprovar, o gestor informa dias/horários de disponibilidade para a visita.
+- Reprovar um pedido (ou "reprovar todos" os demais candidatos ao mesmo
+  animal): muda o estado para "REPROVADO".
+- RN007: um gestor não pode aprovar/ver como candidato um pedido cujo adotante
+  seja ele mesmo (gestor não aprova a própria adoção) — filtre esses pedidos da
+  listagem dele.
+- RN014: cadastro manual de adoção pelo gestor — cria um usuário com senha
+  automática igual à data de nascimento (formato dia-mês-ano) e sinaliza
+  necessidade de redefinição no primeiro acesso.
+- RN015: envie (simule, como nos incrementos anteriores — sem SMTP real, uma
+  mensagem na tela é suficiente) uma notificação informando aprovação (com os
+  horários) ou reprovação ao(s) adotante(s) envolvido(s).
+
+Lembre-se das lições anteriores:
+- Restrinja as rotas de avaliação a hasAnyRole('DIRETOR_GERAL','GESTOR_ADOCAO')
+  no SecurityConfig, e também verifique a autoria dentro do controller/serviço
+  para a regra RN007 (um gestor não pode aprovar o próprio pedido).
+- Teste manualmente se um pedido de outro usuário realmente muda de estado ao
+  ser aprovado/reprovado, e se RN007 realmente bloqueia o gestor de aprovar a
+  própria solicitação.

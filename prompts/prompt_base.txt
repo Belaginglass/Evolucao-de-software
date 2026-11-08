@@ -1,0 +1,105 @@
+PROMPT-BASE — Experimento "Evolução do Código Gerado por um LLM ao Longo de Iterações"
+Sistema: DogTech (Sistema de Gerenciamento de Adoção — SGA)
+
+Este texto é enviado como contexto fixo em TODAS as solicitações ao Gemini a partir do
+incremento I1 (a versão V0 é construída manualmente pelo pesquisador, sem o LLM, e NÃO
+usa este prompt-base). A cada incremento, este prompt-base é combinado com o prompt
+específico do incremento (I1.txt, I2.txt, ..., I10.txt) e com o estado atual do
+código-fonte do projeto.
+
+1. FONTE DE ESPECIFICAÇÃO
+- A única fonte de requisitos é o documento "Requisitos_e_Casos_de_Uso.pdf" (SGA/DogTech).
+  Não crie, suponha ou complete requisitos funcionais, não funcionais, regras de negócio
+  ou casos de uso que não estejam explicitamente no documento ou nos arquivos de
+  incremento fornecidos (requisitos/incrementos/I1.md a I10.md).
+- O Apêndice C (requisitos/apendice_c_esclarecimentos.md), enviado junto com esta
+  solicitação, registra toda decisão de interpretação já tomada para lacunas e
+  inconsistências do documento original (ex.: página única de autenticação, busca de
+  CEP local). Siga essas decisões; não as questione nem proponha alternativas.
+- Quando o documento original for omisso ou ambíguo sobre um detalhe de implementação
+  NÃO coberto pelo Apêndice C (ex.: nomes exatos de colunas, formatos de tela não
+  especificados), escolha a solução mais simples e direta, e sinalize a suposição feita
+  na resposta — essa suposição poderá ser incorporada ao Apêndice C posteriormente.
+
+2. ESCOPO DO INCREMENTO
+- Implemente APENAS as funcionalidades descritas no prompt específico deste incremento.
+- NÃO implemente funcionalidades previstas para incrementos futuros, mesmo que pareçam
+  relacionadas ou convenientes de antecipar.
+- Preserve todas as funcionalidades já implementadas nos incrementos anteriores. Não
+  remova, reescreva ou altere comportamento existente, exceto quando isso for necessário
+  para atender ao requisito do incremento atual ou corrigir um defeito explicitamente
+  apontado pelo pesquisador.
+- Trabalhe sobre o código-fonte atual fornecido (estado mais recente do repositório Git),
+  nunca reconstruindo o sistema do zero.
+
+3. ARQUITETURA E ORGANIZAÇÃO DO CÓDIGO (RNF003 — válido desde o V0)
+- Stack fixa do projeto: Java 17, Spring Boot 3.x, Maven, SQLite (via spring-boot-starter
+  -data-jpa + driver org.xerial:sqlite-jdbc + hibernate-community-dialects), Thymeleaf
+  para as views.
+- Siga o padrão MVC: controladores em com.tcc.iterativa.controller, nunca com lógica de
+  negócio.
+- Camada de serviço (SOA) em com.tcc.iterativa.service: toda regra de negócio e
+  orquestração ficam aqui, nunca diretamente no controlador.
+- Camada DAO em com.tcc.iterativa.repository, usando interfaces Spring Data JPA.
+- Entidades JPA em com.tcc.iterativa.model. DTOs (quando necessários) em
+  com.tcc.iterativa.dto. Classes de configuração (beans, segurança, etc.) em
+  com.tcc.iterativa.config.
+- Não crie camadas, módulos ou abstrações adicionais além dessas quatro, salvo
+  necessidade explícita do requisito.
+
+4. REQUISITOS TRANSVERSAIS (válidos desde o V0 — ver requisitos/incrementos/requisitos_transversais.md)
+- RNF001 (Criptografia do sistema): toda senha criada ou alterada, em qualquer
+  funcionalidade, deve ser armazenada com hash SHA-256 e salt de 8 bits. Use um único
+  componente/bean reaproveitado por todas as funcionalidades que manipulam senha —
+  nunca implemente essa rotina mais de uma vez.
+- RN001 (Validação de e-mail e senha): e-mail deve conter apenas letras A-Z, dígitos 0-9
+  e exatamente um "@", sem os caracteres < > " ' / \ : |; senha deve ter no mínimo 8
+  caracteres e não conter esses mesmos caracteres proibidos. Use um único validador
+  compartilhado por todas as telas que recebem e-mail/senha.
+- RNF008 (Campo de ajuda): sempre que um campo de formulário tiver um ícone "?", ele deve
+  exibir uma informação de ajuda sobre como preenchê-lo. Siga essa convenção em toda
+  tela criada, em qualquer incremento.
+- RNF005 (Alterar estados): mudanças de estado do sistema (estado da adoção, processo de
+  aceite de um novo usuário administrativo, entre outros previstos no documento) devem
+  ser implementadas com o padrão de projeto State — nunca com cadeias de if/else ou
+  switch soltos representando o estado.
+- RN009 (Gerência de agendas): quando a funcionalidade do incremento exigir uma agenda
+  (ex.: ao conceder privilégio administrativo, ao agendar visita, ao agendar prestação de
+  serviço), reaproveite um único serviço de agenda. Não implemente lógicas de agenda
+  separadas para cada caso de uso.
+
+5. INTERPRETAÇÕES ADOTADAS PARA ESTE EXPERIMENTO
+- Página única de autenticação (decisão da seção 3.2 do artigo): embora o <RF001> do
+  documento original descreva duas páginas de autenticação (pública/adotante e
+  administrativa restrita por URL), este experimento usa UMA ÚNICA página de
+  autenticação (login, cadastro e recuperação de senha no mesmo ponto de entrada). O
+  redirecionamento por nível de acesso ocorre DEPOIS do login (RN010), não na escolha de
+  qual página acessar.
+- Busca de CEP (RNF002) sem API externa: em vez de consultar uma API de CEP (Postmon ou
+  similar) pela internet, use o arquivo src/main/resources/ceps.csv como fonte local de
+  dados de endereço. Esse CSV tem as colunas: cep (8 dígitos, sem hífen), rua, bairro,
+  cidade, estado. Ao implementar a busca de CEP (nos incrementos que a utilizam —
+  cadastro de usuário e, conforme citado no documento original, UC004), faça a consulta
+  a esse arquivo local, carregado como recurso do classpath, em vez de uma chamada HTTP
+  externa. Isso evita dependência de rede durante a geração e execução automatizada dos
+  testes ao longo do experimento.
+
+6. REGISTRO E RASTREABILIDADE
+- Ao final de cada resposta, liste explicitamente: (a) os arquivos criados ou
+  modificados; (b) os identificadores exatos dos requisitos funcionais, não funcionais e
+  regras de negócio atendidos neste incremento (ex.: RF001, RNF001, RN001); (c) qualquer
+  suposição ou simplificação feita por ausência de detalhe no documento original.
+- Não faça alterações além do escopo informado nesta solicitação e no prompt específico
+  do incremento.
+
+7. TESTES E COBERTURA (avaliação funcional — ver resultados/protocolo_avaliacao_funcional.md)
+- Para cada funcionalidade implementada neste incremento, escreva testes automatizados
+  (JUnit, executáveis via `mvn test`) cobrindo pelo menos um cenário de sucesso e um de
+  falha, alinhados aos casos de teste de testes/casos_teste.xlsx quando existir um
+  correspondente.
+- Não altere nem remova testes de incrementos anteriores para fazer a suíte acumulada
+  passar artificialmente. Se um teste anterior falhar por causa de uma mudança
+  necessária neste incremento, explique o motivo na resposta (não apenas apague ou
+  enfraqueça o teste).
+- Ao final da resposta, informe também: quantos testes novos foram adicionados, e se a
+  suíte completa (`mvn test`) passou ou não ao final desta alteração.

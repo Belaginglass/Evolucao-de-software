@@ -1,0 +1,21 @@
+```json
+{
+  "arquivos": [
+    {
+      "caminho": "pom.xml",
+      "acao": "modificar",
+      "conteudo": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\n         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd\">\n    <modelVersion>4.0.0</modelVersion>\n\n    <parent>\n        <groupId>org.springframework.boot</groupId>\n        <artifactId>spring-boot-starter-parent</artifactId>\n        <version>3.5.16</version>\n        <relativePath/>\n    </parent>\n\n    <groupId>com.tcc.iterativa</groupId>\n    <artifactId>geracao-iterativa</artifactId>\n    <version>0.0.1-SNAPSHOT</version>\n    <name>geracao-iterativa</name>\n    <description>Projeto de TCC - Geracao iterativa de codigo</description>\n    <packaging>jar</packaging>\n\n    <properties>\n        <java.version>17</java.version>\n    </properties>\n\n    <dependencies>\n        <dependency>\n            <groupId>org.springframework.boot</groupId>\n            <artifactId>spring-boot-starter-web</artifactId>\n        </dependency>\n        <dependency>\n            <groupId>org.springframework.boot</groupId>\n            <artifactId>spring-boot-starter-data-jpa</artifactId>\n        </dependency>\n        <dependency>\n            <groupId>org.springframework.boot</groupId>\n            <artifactId>spring-boot-starter-thymeleaf</artifactId>\n        </dependency>\n        <dependency>\n            <groupId>org.springframework.boot</groupId>\n            <artifactId>spring-boot-starter-security</artifactId>\n        </dependency>\n\n        <dependency>\n            <groupId>org.xerial</groupId>\n            <artifactId>sqlite-jdbc</artifactId>\n            <scope>runtime</scope>\n        </dependency>\n        <!-- Hibernate nao traz dialeto para SQLite por padrao; este modulo fornece o SQLiteDialect -->\n        <dependency>\n            <groupId>org.hibernate.orm</groupId>\n            <artifactId>hibernate-community-dialects</artifactId>\n        </dependency>\n\n        <dependency>\n            <groupId>org.springframework.boot</groupId>\n            <artifactId>spring-boot-starter-test</artifactId>\n            <scope>test</scope>
+        </dependency>\n    </dependencies>\n\n    <build>\n        <plugins>\n            <plugin>\n                <groupId>org.springframework.boot</groupId>\n                <artifactId>spring-boot-maven-plugin</artifactId>\n            </plugin>\n            <plugin>\n                <groupId>org.jacoco</groupId>\n                <artifactId>jacoco-maven-plugin</artifactId>\n                <version>0.8.12</version>\n                <executions>\n                    <execution>\n                        <goals>\n                            <goal>prepare-agent</goal>\n                        </goals>\n                    </execution>\n                    <execution>\n                        <id>report</id>\n                        <phase>test</phase>\n                        <goals>\n                            <goal>report</goal>\n                        </goals>\n                    </execution>\n                </executions>\n            </plugin>\n            <!-- Versao fixada (etapa 6.2): analise estatica complementar via SonarQube.\n                 Uso: mvn sonar:sonar -Dsonar.host.url=<url> -Dsonar.token=<token>\n                      -Dsonar.projectKey=dogtech -Dsonar.projectVersion=Vn -->\n            <plugin>\n                <groupId>org.sonarsource.scanner.maven</groupId>\n                <artifactId>sonar-maven-plugin</artifactId>\n                <version>5.1.0.4751</version>\n            </plugin>\n        </plugins>\n    </build>\n\n</project>\n"
+    }
+  ]
+}
+```
+
+(a) Arquivos modificados:
+- `pom.xml`
+
+(b) Identificadores de requisitos atendidos:
+- Correção de erro de compilação (sintaxe XML malformada devido a um caractere `>` excedente na tag `</goals>` do plugin JaCoCo).
+
+(c) Suposições feitas:
+- Nenhuma suposição adicional foi necessária, pois o erro apontava exatamente para a linha e coluna do arquivo `pom.xml` onde havia um caractere XML inválido.

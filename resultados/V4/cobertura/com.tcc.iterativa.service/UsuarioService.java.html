@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="pt"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UsuarioService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">geracao-iterativa</a> &gt; <a href="index.source.html" class="el_package">com.tcc.iterativa.service</a> &gt; <span class="el_source">UsuarioService.java</span></div><h1>UsuarioService.java</h1><pre class="source lang-java linenums">package com.tcc.iterativa.service;
+
+import com.tcc.iterativa.config.CepUtils;
+import com.tcc.iterativa.config.PasswordUtils;
+import com.tcc.iterativa.model.Usuario;
+import com.tcc.iterativa.repository.UsuarioRepository;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Base64;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+public class UsuarioService {
+
+    private final UsuarioRepository usuarioRepository;
+    private final PasswordUtils passwordUtils;
+    private final CepUtils cepUtils;
+
+<span class="fc" id="L23">    public UsuarioService(UsuarioRepository usuarioRepository, PasswordUtils passwordUtils, CepUtils cepUtils) {</span>
+<span class="fc" id="L24">        this.usuarioRepository = usuarioRepository;</span>
+<span class="fc" id="L25">        this.passwordUtils = passwordUtils;</span>
+<span class="fc" id="L26">        this.cepUtils = cepUtils;</span>
+<span class="fc" id="L27">    }</span>
+
+    public Usuario cadastrar(String email, String senha, String papel, String nome, String cpf, LocalDate dataNascimento, String telefones, String rua, String numero, String complemento, String bairro, String cidade, String estado, String cep, byte[] fotoBytes, String voluntario) throws Exception {
+<span class="fc bfc" id="L30" title="All 2 branches covered.">        if (!passwordUtils.validateFormat(email, senha)) {</span>
+<span class="fc" id="L31">            throw new IllegalArgumentException(&quot;E-mail ou senha inválidos segundo as regras de formato.&quot;);</span>
+        }
+<span class="pc bpc" id="L33" title="1 of 2 branches missed.">        if (usuarioRepository.findByEmail(email).isPresent()) {</span>
+<span class="nc" id="L34">            throw new IllegalArgumentException(&quot;E-mail já cadastrado.&quot;);</span>
+        }
+<span class="pc bpc" id="L36" title="3 of 6 branches missed.">        if (cpf != null &amp;&amp; !cpf.isEmpty() &amp;&amp; usuarioRepository.findAll().stream().anyMatch(u -&gt; cpf.equals(u.getCpf()))) {</span>
+<span class="nc" id="L37">            throw new IllegalArgumentException(&quot;CPF já cadastrado.&quot;);</span>
+        }
+<span class="pc bpc" id="L39" title="1 of 4 branches missed.">        if (telefones == null || telefones.trim().isEmpty()) {</span>
+<span class="fc" id="L40">            throw new IllegalArgumentException(&quot;Pelo menos um número de telefone deve ser inserido.&quot;);</span>
+        }
+
+<span class="fc" id="L43">        String salt = passwordUtils.generateSalt();</span>
+<span class="fc" id="L44">        String hash = passwordUtils.hashPassword(senha, salt);</span>
+
+<span class="pc bpc" id="L46" title="1 of 4 branches missed.">        String fotoStr = (fotoBytes != null &amp;&amp; fotoBytes.length &gt; 0) ? Base64.getEncoder().encodeToString(fotoBytes) : null;</span>
+
+<span class="fc" id="L48">        Usuario usuario = new Usuario(email, hash, salt, papel);</span>
+<span class="fc" id="L49">        usuario.setNome(nome);</span>
+<span class="fc" id="L50">        usuario.setCpf(cpf);</span>
+<span class="fc" id="L51">        usuario.setDataNascimento(dataNascimento);</span>
+<span class="fc" id="L52">        usuario.setTelefones(telefones);</span>
+<span class="fc" id="L53">        usuario.setRua(rua);</span>
+<span class="fc" id="L54">        usuario.setNumero(numero);</span>
+<span class="fc" id="L55">        usuario.setComplemento(complemento);</span>
+<span class="fc" id="L56">        usuario.setBairro(bairro);</span>
+<span class="fc" id="L57">        usuario.setCidade(cidade);</span>
+<span class="fc" id="L58">        usuario.setEstado(estado);</span>
+<span class="fc" id="L59">        usuario.setCep(cep);</span>
+<span class="fc" id="L60">        usuario.setFoto(fotoStr);</span>
+<span class="fc" id="L61">        usuario.setVoluntario(voluntario);</span>
+
+<span class="fc" id="L63">        return usuarioRepository.save(usuario);</span>
+    }
+
+    // Compatibilidade com testes antigos de I1
+    public Usuario cadastrar(String email, String senha, String papel) throws Exception {
+<span class="fc" id="L68">        return cadastrar(email, senha, papel, &quot;Nome Teste&quot;, &quot;00000000000&quot;, LocalDate.now().minusYears(20), &quot;99999-9999&quot;, &quot;Rua A&quot;, &quot;10&quot;, &quot;&quot;, &quot;Bairro B&quot;, &quot;Cidade C&quot;, &quot;MG&quot;, &quot;36050000&quot;, null, &quot;Sim&quot;);</span>
+    }
+
+    public Optional&lt;Usuario&gt; autenticar(String email, String senha) {
+<span class="fc" id="L72">        Optional&lt;Usuario&gt; opt = usuarioRepository.findByEmail(email);</span>
+<span class="pc bpc" id="L73" title="1 of 2 branches missed.">        if (opt.isPresent()) {</span>
+<span class="fc" id="L74">            Usuario u = opt.get();</span>
+<span class="pc bpc" id="L75" title="1 of 2 branches missed.">            if (passwordUtils.validatePassword(senha, u.getSalt(), u.getSenha())) {</span>
+<span class="fc" id="L76">                return Optional.of(u);</span>
+            }
+        }
+<span class="nc" id="L79">        return Optional.empty();</span>
+    }
+
+    public String gerarTokenRecuperacao(String email) {
+<span class="fc" id="L83">        Optional&lt;Usuario&gt; opt = usuarioRepository.findByEmail(email);</span>
+<span class="pc bpc" id="L84" title="1 of 2 branches missed.">        if (opt.isPresent()) {</span>
+<span class="fc" id="L85">            Usuario u = opt.get();</span>
+<span class="fc" id="L86">            String token = UUID.randomUUID().toString().replace(&quot;-&quot;, &quot;&quot;);</span>
+<span class="fc" id="L87">            u.setTokenRecuperacao(token);</span>
+<span class="fc" id="L88">            u.setValidadeToken(LocalDateTime.now().plusHours(24));</span>
+<span class="fc" id="L89">            usuarioRepository.save(u);</span>
+<span class="fc" id="L90">            return token;</span>
+        }
+<span class="nc" id="L92">        return null;</span>
+    }
+
+    public boolean alterarSenhaComToken(String token, String novaSenha) {
+<span class="fc" id="L96">        Optional&lt;Usuario&gt; opt = usuarioRepository.findByTokenRecuperacao(token);</span>
+<span class="pc bpc" id="L97" title="1 of 2 branches missed.">        if (opt.isPresent()) {</span>
+<span class="fc" id="L98">            Usuario u = opt.get();</span>
+<span class="pc bpc" id="L99" title="2 of 4 branches missed.">            if (u.getValidadeToken() != null &amp;&amp; u.getValidadeToken().isAfter(LocalDateTime.now())) {</span>
+<span class="pc bpc" id="L100" title="1 of 2 branches missed.">                if (!passwordUtils.validateFormat(u.getEmail(), novaSenha)) {</span>
+<span class="nc" id="L101">                    return false;</span>
+                }
+<span class="fc" id="L103">                String salt = passwordUtils.generateSalt();</span>
+<span class="fc" id="L104">                u.setSenha(passwordUtils.hashPassword(novaSenha, salt));</span>
+<span class="fc" id="L105">                u.setSalt(salt);</span>
+<span class="fc" id="L106">                u.setTokenRecuperacao(null);</span>
+<span class="fc" id="L107">                u.setValidadeToken(null);</span>
+<span class="fc" id="L108">                usuarioRepository.save(u);</span>
+<span class="fc" id="L109">                return true;</span>
+            }
+        }
+<span class="nc" id="L112">        return false;</span>
+    }
+    
+    public Optional&lt;Usuario&gt; buscarPorToken(String token) {
+<span class="nc" id="L116">        Optional&lt;Usuario&gt; opt = usuarioRepository.findByTokenRecuperacao(token);</span>
+<span class="nc bnc" id="L117" title="All 6 branches missed.">        if (opt.isPresent() &amp;&amp; opt.get().getValidadeToken() != null &amp;&amp; opt.get().getValidadeToken().isAfter(LocalDateTime.now())) {</span>
+<span class="nc" id="L118">            return opt;</span>
+        }
+<span class="nc" id="L120">        return Optional.empty();</span>
+    }
+
+    public Map&lt;String, String&gt; consultarCep(String cep) {
+<span class="fc" id="L124">        return cepUtils.buscarCep(cep);</span>
+    }
+
+    public String atualizarDadosPessoais(String emailAtual, String nome, String cpf, LocalDate dataNascimento, String telefones, String rua, String numero, String complemento, String bairro, String cidade, String estado, String cep, byte[] fotoBytes, String voluntario, String novaSenha) throws Exception {
+<span class="fc" id="L128">        Optional&lt;Usuario&gt; opt = usuarioRepository.findByEmail(emailAtual);</span>
+<span class="pc bpc" id="L129" title="1 of 2 branches missed.">        if (opt.isEmpty()) {</span>
+<span class="nc" id="L130">            throw new IllegalArgumentException(&quot;Usuário não encontrado.&quot;);</span>
+        }
+<span class="fc" id="L132">        Usuario u = opt.get();</span>
+        
+<span class="pc bpc" id="L134" title="1 of 2 branches missed.">        if (nome != null) u.setNome(nome);</span>
+<span class="pc bpc" id="L135" title="1 of 2 branches missed.">        if (cpf != null) u.setCpf(cpf);</span>
+<span class="pc bpc" id="L136" title="1 of 2 branches missed.">        if (dataNascimento != null) u.setDataNascimento(dataNascimento);</span>
+<span class="pc bpc" id="L137" title="1 of 2 branches missed.">        if (telefones != null) u.setTelefones(telefones);</span>
+<span class="pc bpc" id="L138" title="1 of 2 branches missed.">        if (rua != null) u.setRua(rua);</span>
+<span class="pc bpc" id="L139" title="1 of 2 branches missed.">        if (numero != null) u.setNumero(numero);</span>
+<span class="pc bpc" id="L140" title="1 of 2 branches missed.">        if (complemento != null) u.setComplemento(complemento);</span>
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">        if (bairro != null) u.setBairro(bairro);</span>
+<span class="pc bpc" id="L142" title="1 of 2 branches missed.">        if (cidade != null) u.setCidade(cidade);</span>
+<span class="pc bpc" id="L143" title="1 of 2 branches missed.">        if (estado != null) u.setEstado(estado);</span>
+<span class="pc bpc" id="L144" title="1 of 2 branches missed.">        if (cep != null) u.setCep(cep);</span>
+<span class="pc bpc" id="L145" title="3 of 4 branches missed.">        if (fotoBytes != null &amp;&amp; fotoBytes.length &gt; 0) {</span>
+<span class="nc" id="L146">            u.setFoto(Base64.getEncoder().encodeToString(fotoBytes));</span>
+        }
+<span class="pc bpc" id="L148" title="1 of 2 branches missed.">        if (voluntario != null) u.setVoluntario(voluntario);</span>
+
+<span class="pc bpc" id="L150" title="2 of 4 branches missed.">        if (novaSenha != null &amp;&amp; !novaSenha.isEmpty()) {</span>
+<span class="pc bpc" id="L151" title="1 of 2 branches missed.">            if (!passwordUtils.validateFormat(u.getEmail(), novaSenha)) {</span>
+<span class="nc" id="L152">                throw new IllegalArgumentException(&quot;Nova senha fora do formato exigido.&quot;);</span>
+            }
+<span class="fc" id="L154">            String salt = passwordUtils.generateSalt();</span>
+<span class="fc" id="L155">            u.setSenha(passwordUtils.hashPassword(novaSenha, salt));</span>
+<span class="fc" id="L156">            u.setSalt(salt);</span>
+        }
+
+<span class="fc" id="L159">        u.setDataUltimaAlteracao(LocalDateTime.now());</span>
+<span class="fc" id="L160">        String token = UUID.randomUUID().toString().replace(&quot;-&quot;, &quot;&quot;);</span>
+<span class="fc" id="L161">        u.setTokenRecuperacao(token);</span>
+<span class="fc" id="L162">        u.setValidadeToken(LocalDateTime.now().plusHours(24));</span>
+
+<span class="fc" id="L164">        usuarioRepository.save(u);</span>
+<span class="fc" id="L165">        return token;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

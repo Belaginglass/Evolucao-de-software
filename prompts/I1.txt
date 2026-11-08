@@ -1,0 +1,18 @@
+INCREMENTO I1 — Autenticação e controle inicial de acesso
+
+Implemente o caso de uso UC001 (Autenticação), descrito em detalhe no bloco
+"REQUISITOS DO INCREMENTO I1" desta mesma solicitação, e nenhuma outra funcionalidade.
+
+Lembre-se, em especial (ver Apêndice C para o texto completo de cada item):
+- C.1: uma única página de autenticação (não as duas do texto literal do RF001).
+- C.5: o token de recuperação de senha segue o conteúdo da RN005 (UUID de 32
+  caracteres, validade de 24h), independentemente do número "RN006" citado no fluxo
+  [FA-1] do documento original.
+
+Ao final desta etapa, deve ser possível: cadastrar-se (dados mínimos para criar uma
+sessão — o cadastro completo de usuário, RN002, é implementado apenas no Incremento
+I2; aqui, crie o necessário para autenticar, mesmo que o cadastro completo venha
+depois), autenticar-se com e-mail/senha, recuperar senha esquecida, e ser redirecionado
+à página inicial correspondente ao nível de acesso (RN010) — mesmo que a página
+inicial em si (Incremento I4) ainda não exista; nesse caso, redirecione para uma rota
+provisória simples, documentando essa suposição na resposta.

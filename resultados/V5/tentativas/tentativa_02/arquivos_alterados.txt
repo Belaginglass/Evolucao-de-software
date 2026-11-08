@@ -1,0 +1,8 @@
+Modificado	src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+Modificado	src/main/java/com/tcc/iterativa/controller/AuthController.java
+Modificado	src/main/java/com/tcc/iterativa/controller/UsuarioController.java
+Modificado	src/main/java/com/tcc/iterativa/model/Usuario.java
+Modificado	src/main/java/com/tcc/iterativa/service/UsuarioService.java
+Modificado	src/main/resources/templates/home/admin.html
+Criado	src/main/resources/templates/usuario/gerenciar.html
+Criado	src/test/java/com/tcc/iterativa/service/UsuarioServiceI5Test.java

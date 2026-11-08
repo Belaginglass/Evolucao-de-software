@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="pt"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Apadrinhamento.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">geracao-iterativa</a> &gt; <a href="index.source.html" class="el_package">com.tcc.iterativa.model</a> &gt; <span class="el_source">Apadrinhamento.java</span></div><h1>Apadrinhamento.java</h1><pre class="source lang-java linenums">package com.tcc.iterativa.model;
+
+import jakarta.persistence.*;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = &quot;apadrinhamentos&quot;)
+public class Apadrinhamento {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = &quot;animal_id&quot;, nullable = false)
+    private Animal animal;
+
+    @ManyToOne
+    @JoinColumn(name = &quot;adotante_id&quot;, nullable = false)
+    private Usuario adotante;
+
+    @Column(nullable = false)
+    private String tipoServico;
+
+    private LocalDate dia;
+    private LocalTime horario;
+
+    @Column(nullable = false)
+    private String status; // SOLICITADO, CONFIRMADO
+
+    private LocalDateTime dataPedido;
+
+<span class="fc" id="L35">    public Apadrinhamento() {}</span>
+
+<span class="fc" id="L37">    public Apadrinhamento(Animal animal, Usuario adotante, String tipoServico, LocalDate dia, LocalTime horario, String status, LocalDateTime dataPedido) {</span>
+<span class="fc" id="L38">        this.animal = animal;</span>
+<span class="fc" id="L39">        this.adotante = adotante;</span>
+<span class="fc" id="L40">        this.tipoServico = tipoServico;</span>
+<span class="fc" id="L41">        this.dia = dia;</span>
+<span class="fc" id="L42">        this.horario = horario;</span>
+<span class="fc" id="L43">        this.status = status;</span>
+<span class="fc" id="L44">        this.dataPedido = dataPedido;</span>
+<span class="fc" id="L45">    }</span>
+
+<span class="fc" id="L47">    public Long getId() { return id; }</span>
+<span class="nc" id="L48">    public void setId(Long id) { this.id = id; }</span>
+
+<span class="nc" id="L50">    public Animal getAnimal() { return animal; }</span>
+<span class="nc" id="L51">    public void setAnimal(Animal animal) { this.animal = animal; }</span>
+
+<span class="nc" id="L53">    public Usuario getAdotante() { return adotante; }</span>
+<span class="nc" id="L54">    public void setAdotante(Usuario adotante) { this.adotante = adotante; }</span>
+
+<span class="fc" id="L56">    public String getTipoServico() { return tipoServico; }</span>
+<span class="nc" id="L57">    public void setTipoServico(String tipoServico) { this.tipoServico = tipoServico; }</span>
+
+<span class="nc" id="L59">    public LocalDate getDia() { return dia; }</span>
+<span class="nc" id="L60">    public void setDia(LocalDate dia) { this.dia = dia; }</span>
+
+<span class="nc" id="L62">    public LocalTime getHorario() { return horario; }</span>
+<span class="nc" id="L63">    public void setHorario(LocalTime horario) { this.horario = horario; }</span>
+
+<span class="nc" id="L65">    public String getStatus() { return status; }</span>
+<span class="nc" id="L66">    public void setStatus(String status) { this.status = status; }</span>
+
+<span class="nc" id="L68">    public LocalDateTime getDataPedido() { return dataPedido; }</span>
+<span class="nc" id="L69">    public void setDataPedido(LocalDateTime dataPedido) { this.dataPedido = dataPedido; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

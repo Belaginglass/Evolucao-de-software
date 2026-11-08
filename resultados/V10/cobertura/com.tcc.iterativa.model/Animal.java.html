@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="pt"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Animal.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">geracao-iterativa</a> &gt; <a href="index.source.html" class="el_package">com.tcc.iterativa.model</a> &gt; <span class="el_source">Animal.java</span></div><h1>Animal.java</h1><pre class="source lang-java linenums">package com.tcc.iterativa.model;
+
+import jakarta.persistence.*;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+@Entity
+@Table(name = &quot;animais&quot;)
+public class Animal {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String especie; // Canina / Felina
+
+    @Column(nullable = false)
+    private String sexo; // Macho / Fêmea
+
+    @Column(nullable = false)
+    private String castrado; // Sim / Não
+
+    @Column(nullable = false)
+    private String vermifugado; // Sim / Não
+
+    private String idadeAproximada;
+
+    @Column(nullable = false)
+    private String raca;
+
+    private String temperamento; // Múltiplos separados por vírgula
+
+    private String porte;
+
+    @Column(columnDefinition = &quot;TEXT&quot;)
+    private String fotos; // JSON ou URLs/Base64 separados por ponto e vírgula
+
+    @Column(nullable = false)
+    private String nomeReferencia;
+
+    @Column(columnDefinition = &quot;TEXT&quot;, nullable = false)
+    private String historia;
+
+    @Column(nullable = false)
+    private String patrimonioTombado; // Sim / Não
+
+    @Column(nullable = false)
+    private String emTratamento; // Sim / Não
+
+    @Column(nullable = false)
+    private String disponivelAdocao; // Sim / Não
+
+    @Column(columnDefinition = &quot;TEXT&quot;)
+    private String vacinasJson; // Armazena vacinas (nome, doses, datas)
+
+    @ManyToOne
+    @JoinColumn(name = &quot;baia_id&quot;)
+    private Baia baia;
+
+    @Column(columnDefinition = &quot;TEXT&quot;)
+    private String outrasInformacoes;
+
+    @Column(nullable = false)
+    private String autorFotografia;
+
+    private String contatoAutor;
+
+<span class="fc" id="L70">    public Animal() {}</span>
+
+<span class="fc" id="L72">    public Long getId() { return id; }</span>
+<span class="nc" id="L73">    public void setId(Long id) { this.id = id; }</span>
+
+<span class="nc" id="L75">    public String getEspecie() { return especie; }</span>
+<span class="fc" id="L76">    public void setEspecie(String especie) { this.especie = especie; }</span>
+
+<span class="nc" id="L78">    public String getSexo() { return sexo; }</span>
+<span class="fc" id="L79">    public void setSexo(String sexo) { this.sexo = sexo; }</span>
+
+<span class="nc" id="L81">    public String getCastrado() { return castrado; }</span>
+<span class="fc" id="L82">    public void setCastrado(String castrado) { this.castrado = castrado; }</span>
+
+<span class="nc" id="L84">    public String getVermifugado() { return vermifugado; }</span>
+<span class="fc" id="L85">    public void setVermifugado(String vermifugado) { this.vermifugado = vermifugado; }</span>
+
+<span class="nc" id="L87">    public String getIdadeAproximada() { return idadeAproximada; }</span>
+<span class="fc" id="L88">    public void setIdadeAproximada(String idadeAproximada) { this.idadeAproximada = idadeAproximada; }</span>
+
+<span class="nc" id="L90">    public String getRaca() { return raca; }</span>
+<span class="fc" id="L91">    public void setRaca(String raca) { this.raca = raca; }</span>
+
+<span class="nc" id="L93">    public String getTemperamento() { return temperamento; }</span>
+<span class="fc" id="L94">    public void setTemperamento(String temperamento) { this.temperamento = temperamento; }</span>
+
+<span class="nc" id="L96">    public String getPorte() { return porte; }</span>
+<span class="fc" id="L97">    public void setPorte(String porte) { this.porte = porte; }</span>
+
+<span class="nc" id="L99">    public String getFotos() { return fotos; }</span>
+<span class="fc" id="L100">    public void setFotos(String fotos) { this.fotos = fotos; }</span>
+
+<span class="fc" id="L102">    public String getNomeReferencia() { return nomeReferencia; }</span>
+<span class="fc" id="L103">    public void setNomeReferencia(String nomeReferencia) { this.nomeReferencia = nomeReferencia; }</span>
+
+<span class="nc" id="L105">    public String getHistoria() { return historia; }</span>
+<span class="fc" id="L106">    public void setHistoria(String historia) { this.historia = historia; }</span>
+
+<span class="fc" id="L108">    public String getPatrimonioTombado() { return patrimonioTombado; }</span>
+<span class="fc" id="L109">    public void setPatrimonioTombado(String patrimonioTombado) { this.patrimonioTombado = patrimonioTombado; }</span>
+
+<span class="fc" id="L111">    public String getEmTratamento() { return emTratamento; }</span>
+<span class="fc" id="L112">    public void setEmTratamento(String emTratamento) { this.emTratamento = emTratamento; }</span>
+
+<span class="fc" id="L114">    public String getDisponivelAdocao() { return disponivelAdocao; }</span>
+<span class="fc" id="L115">    public void setDisponivelAdocao(String disponivelAdocao) { this.disponivelAdocao = disponivelAdocao; }</span>
+
+<span class="nc" id="L117">    public String getVacinasJson() { return vacinasJson; }</span>
+<span class="fc" id="L118">    public void setVacinasJson(String vacinasJson) { this.vacinasJson = vacinasJson; }</span>
+
+<span class="fc" id="L120">    public Baia getBaia() { return baia; }</span>
+<span class="fc" id="L121">    public void setBaia(Baia baia) { this.baia = baia; }</span>
+
+<span class="nc" id="L123">    public String getOutrasInformacoes() { return outrasInformacoes; }</span>
+<span class="fc" id="L124">    public void setOutrasInformacoes(String outrasInformacoes) { this.outrasInformacoes = outrasInformacoes; }</span>
+
+<span class="nc" id="L126">    public String getAutorFotografia() { return autorFotografia; }</span>
+<span class="fc" id="L127">    public void setAutorFotografia(String autorFotografia) { this.autorFotografia = autorFotografia; }</span>
+
+<span class="nc" id="L129">    public String getContatoAutor() { return contatoAutor; }</span>
+<span class="fc" id="L130">    public void setContatoAutor(String contatoAutor) { this.contatoAutor = contatoAutor; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,7 @@
+Criado	src/main/java/com/tcc/iterativa/controller/AnimalController.java
+Criado	src/main/java/com/tcc/iterativa/model/Animal.java
+Criado	src/main/java/com/tcc/iterativa/repository/AnimalRepository.java
+Criado	src/main/java/com/tcc/iterativa/service/AnimalService.java
+Criado	src/main/resources/templates/animal/cadastro.html
+Modificado	src/main/resources/templates/home/admin.html
+Criado	src/test/java/com/tcc/iterativa/service/AnimalServiceI3Test.java

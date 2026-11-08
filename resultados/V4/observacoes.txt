@@ -1,0 +1,11 @@
+V4 = I4 (Página inicial, UC009/RN010). 1 chamada à API — aplicou de primeira,
+compilou, 14/14 testes JUnit passaram. Diferente de I3, a restrição de papel
+ADMIN para as rotas de edição (/home/sobre-nos, /home/servicos, /home/campanhas,
+/home/doacoes) já veio correta na primeira tentativa (o prompt deste incremento
+citava explicitamente a lição aprendida em I3).
+
+CT019 (editar sobre nós) e CT020 (seleção aleatória, RN010) confirmados por
+teste manual HTTP — 3 cargas da home com 5 serviços cadastrados retornaram
+subconjuntos diferentes a cada vez. Sem regressão em I1-I3.
+
+Taxa de aprovação (TA) de V4: 2/2 = 100%.

@@ -1,0 +1,585 @@
+diff --git a/pom.xml b/pom.xml
+index 90a9ada..a01635c 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -35,6 +35,10 @@
+             <groupId>org.springframework.boot</groupId>
+             <artifactId>spring-boot-starter-thymeleaf</artifactId>
+         </dependency>
++        <dependency>
++            <groupId>org.springframework.boot</groupId>
++            <artifactId>spring-boot-starter-security</artifactId>
++        </dependency>
+ 
+         <dependency>
+             <groupId>org.xerial</groupId>
+diff --git a/src/main/java/com/tcc/iterativa/config/PasswordUtils.java b/src/main/java/com/tcc/iterativa/config/PasswordUtils.java
+new file mode 100644
+index 0000000..440e8ae
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/config/PasswordUtils.java
+@@ -0,0 +1,58 @@
++package com.tcc.iterativa.config;
++
++import org.springframework.stereotype.Component;
++import java.nio.charset.StandardCharsets;
++import java.security.MessageDigest;
++import java.security.NoSuchAlgorithmException;
++import java.security.SecureRandom;
++import java.util.Base64;
++
++@Component
++public class PasswordUtils {
++
++    private static final int SALT_BYTES = 1; // 8 bits = 1 byte
++
++    public String generateSalt() {
++        byte[] salt = new byte[SALT_BYTES];
++        new SecureRandom().nextBytes(salt);
++        return Base64.getEncoder().encodeToString(salt);
++    }
++
++    public String hashPassword(String password, String saltStr) {
++        try {
++            MessageDigest digest = MessageDigest.getInstance("SHA-256");
++            byte[] salt = Base64.getDecoder().decode(saltStr);
++            digest.update(salt);
++            byte[] hash = digest.digest(password.getBytes(StandardCharsets.UTF_8));
++            return Base64.getEncoder().encodeToString(hash);
++        } catch (NoSuchAlgorithmException e) {
++            throw new RuntimeException("Erro ao criptografar senha", e);
++        }
++    }
++
++    public boolean validatePassword(String rawPassword, String saltStr, String storedHash) {
++        String newHash = hashPassword(rawPassword, saltStr);
++        return newHash.equals(storedHash);
++    }
++
++    public boolean validateFormat(String email, String password) {
++        if (email == null || password == null) {
++            return false;
++        }
++        // RN001: E-mail deve conter apenas letras A-Z, digitos 0-9 e exatamente um "@", sem < > " ' / \ : |
++        // Senha: min 8 caracteres, sem esses mesmos caracteres.
++        String emailRegex = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$Rs*";
++        // Ajuste simples para caracteres proibidos
++        String forbiddenChars = "[<>\"'/:|\\\\]";
++        
++        if (email.matches(".*" + forbiddenChars + ".*")) return false;
++        if (password.matches(".*" + forbiddenChars + ".*")) return false;
++        
++        long atCount = email.chars().filter(ch -> ch == '@').count();
++        if (atCount != 1) return false;
++
++        if (password.length() < 8) return false;
++
++        return true;
++    }
++}
+diff --git a/src/main/java/com/tcc/iterativa/config/SecurityConfig.java b/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+new file mode 100644
+index 0000000..6268fa2
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/config/SecurityConfig.java
+@@ -0,0 +1,25 @@
++package com.tcc.iterativa.config;
++
++import org.springframework.context.annotation.Bean;
++import org.springframework.context.annotation.Configuration;
++import org.springframework.security.config.annotation.web.builders.HttpSecurity;
++import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
++import org.springframework.security.web.SecurityFilterChain;
++
++@Configuration
++@EnableWebSecurity
++public class SecurityConfig {
++
++    @Bean
++    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
++        http
++            .csrf(csrf -> csrf.disable())
++            .authorizeHttpRequests(auth -> auth
++                .requestMatchers("/", "/login", "/cadastro", "/recuperar-senha", "/atualizar-senha", "/h2-console/**").permitAll()
++                .anyRequest().authenticated()
++            )
++            .formLogin(form -> form.disable());
++        
++        return http.build();
++    }
++}
+diff --git a/src/main/java/com/tcc/iterativa/controller/AuthController.java b/src/main/java/com/tcc/iterativa/controller/AuthController.java
+new file mode 100644
+index 0000000..efb6d4e
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/controller/AuthController.java
+@@ -0,0 +1,120 @@
++package com.tcc.iterativa.controller;
++
++import com.tcc.iterativa.model.Usuario;
++import com.tcc.iterativa.service.UsuarioService;
++import jakarta.servlet.http.HttpServletRequest;
++import jakarta.servlet.http.HttpServletResponse;
++import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
++import org.springframework.security.core.authority.SimpleGrantedAuthority;
++import org.springframework.security.core.context.SecurityContext;
++import org.springframework.security.core.context.SecurityContextHolder;
++import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
++import org.springframework.security.web.context.SecurityContextRepository;
++import org.springframework.stereotype.Controller;
++import org.springframework.ui.Model;
++import org.springframework.web.bind.annotation.*;
++
++import java.util.Collections;
++import java.util.Optional;
++
++@Controller
++public class AuthController {
++
++    private final UsuarioService usuarioService;
++    private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
++
++    public AuthController(UsuarioService usuarioService) {
++        this.usuarioService = usuarioService;
++    }
++
++    @GetMapping({"/", "/login"})
++    public String loginPage() {
++        return "auth/login";
++    }
++
++    @PostMapping("/login")
++    public String fazerLogin(@RequestParam String email, @RequestParam String senha, Model model, HttpServletRequest request, HttpServletResponse response) {
++        Optional<Usuario> usuarioOpt = usuarioService.autenticar(email, senha);
++        if (usuarioOpt.isPresent()) {
++            Usuario usuario = usuarioOpt.get();
++            
++            // Estabelece a autenticacao no Spring Security Context
++            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
++                usuario.getEmail(),
++                null,
++                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + usuario.getPapel()))
++            );
++            
++            SecurityContext context = SecurityContextHolder.createEmptyContext();
++            context.setAuthentication(authentication);
++            SecurityContextHolder.setContext(context);
++            securityContextRepository.saveContext(context, request, response);
++
++            if ("ADMIN".equals(usuario.getPapel())) {
++                return "redirect:/home-admin";
++            } else {
++                return "redirect:/home-adotante";
++            }
++        }
++        model.addAttribute("erro", "E-mail ou senha incorretos.");
++        return "auth/login";
++    }
++
++    @PostMapping("/cadastro")
++    public String cadastrar(@RequestParam String email, @RequestParam String senha, @RequestParam(defaultValue = "ADOTANTE") String papel, Model model) {
++        try {
++            usuarioService.cadastrar(email, senha, papel);
++            model.addAttribute("sucesso", "Cadastro realizado com sucesso! Faça login.");
++        } catch (Exception e) {
++            model.addAttribute("erro", e.getMessage());
++        }
++        return "auth/login";
++    }
++
++    @PostMapping("/recuperar-senha")
++    public String recuperarSenha(@RequestParam String email, Model model) {
++        String token = usuarioService.gerarTokenRecuperacao(email);
++        if (token != null) {
++            model.addAttribute(
++                "sucesso",
++                "Link de recuperação enviado. Simulação de link: /atualizar-senha?token=" + token
++            );
++        } else {
++            model.addAttribute("erro", "E-mail não encontrado.");
++        }
++        return "auth/login";
++    }
++
++    @GetMapping("/atualizar-senha")
++    public String atualizarSenhaPage(@RequestParam String token, Model model) {
++        Optional<Usuario> u = usuarioService.buscarPorToken(token);
++        if (u.isPresent()) {
++            model.addAttribute("token", token);
++            return "auth/nova-senha";
++        }
++        model.addAttribute("erro", "Token inválido ou expirado.");
++        return "auth/login";
++    }
++
++    @PostMapping("/atualizar-senha")
++    public String atualizarSenha(@RequestParam String token, @RequestParam String novaSenha, Model model) {
++        boolean sucesso = usuarioService.alterarSenhaComToken(token, novaSenha);
++        if (sucesso) {
++            model.addAttribute("sucesso", "Senha alterada com sucesso! Faça login.");
++            return "auth/login";
++        }
++        model.addAttribute("token", token);
++        model.addAttribute("erro", "Falha ao alterar senha. Verifique o formato ou validade.");
++        return "auth/nova-senha";
++    }
++
++    @GetMapping("/home-admin")
++    public String homeAdmin() {
++        return "home/admin";
++    }
++
++    @GetMapping("/home-adotante")
++    public String homeAdotante() {
++        return "home/adotante";
++    }
++}
+diff --git a/src/main/java/com/tcc/iterativa/model/Usuario.java b/src/main/java/com/tcc/iterativa/model/Usuario.java
+new file mode 100644
+index 0000000..b0c2dd5
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/model/Usuario.java
+@@ -0,0 +1,58 @@
++package com.tcc.iterativa.model;
++
++import jakarta.persistence.*;
++import java.time.LocalDateTime;
++
++@Entity
++@Table(name = "usuarios")
++public class Usuario {
++
++    @Id
++    @GeneratedValue(strategy = GenerationType.IDENTITY)
++    private Long id;
++
++    @Column(unique = true, nullable = false)
++    private String email;
++
++    @Column(nullable = false)
++    private String senha;
++
++    @Column(nullable = false)
++    private String salt;
++
++    @Column(nullable = false)
++    private String papel; // ADMIN ou ADOTANTE
++
++    private String tokenRecuperacao;
++    private LocalDateTime validadeToken;
++
++    public Usuario() {}
++
++    public Usuario(String email, String senha, String salt, String papel) {
++        this.email = email;
++        this.senha = senha;
++        this.salt = salt;
++        this.papel = papel;
++    }
++
++    public Long getId() { return id; }
++    public void setId(Long id) { this.id = id; }
++
++    public String getEmail() { return email; }
++    public void setEmail(String email) { this.email = email; }
++
++    public String getSenha() { return senha; }
++    public void setSenha(String senha) { this.senha = senha; }
++
++    public String getSalt() { return salt; }
++    public void setSalt(String salt) { this.salt = salt; }
++
++    public String getPapel() { return papel; }
++    public void setPapel(String papel) { this.papel = papel; }
++
++    public String getTokenRecuperacao() { return tokenRecuperacao; }
++    public void setTokenRecuperacao(String tokenRecuperacao) { this.tokenRecuperacao = tokenRecuperacao; }
++
++    public LocalDateTime getValidadeToken() { return validadeToken; }
++    public void setValidadeToken(LocalDateTime validadeToken) { this.validadeToken = validadeToken; }
++}
+diff --git a/src/main/java/com/tcc/iterativa/repository/UsuarioRepository.java b/src/main/java/com/tcc/iterativa/repository/UsuarioRepository.java
+new file mode 100644
+index 0000000..38a030e
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/repository/UsuarioRepository.java
+@@ -0,0 +1,12 @@
++package com.tcc.iterativa.repository;
++
++import com.tcc.iterativa.model.Usuario;
++import org.springframework.data.jpa.repository.JpaRepository;
++import org.springframework.stereotype.Repository;
++import java.util.Optional;
++
++@Repository
++public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
++    Optional<Usuario> findByEmail(String email);
++    Optional<Usuario> findByTokenRecuperacao(String token);
++}
+diff --git a/src/main/java/com/tcc/iterativa/service/UsuarioService.java b/src/main/java/com/tcc/iterativa/service/UsuarioService.java
+new file mode 100644
+index 0000000..cfb2cc2
+--- /dev/null
++++ b/src/main/java/com/tcc/iterativa/service/UsuarioService.java
+@@ -0,0 +1,90 @@
++package com.tcc.iterativa.service;
++
++import com.tcc.iterativa.config.PasswordUtils;
++import com.tcc.iterativa.model.Usuario;
++import com.tcc.iterativa.repository.UsuarioRepository;
++import org.springframework.stereotype.Service;
++
++import java.time.LocalDateTime;
++import java.util.Optional;
++import java.util.UUID;
++
++@Service
++public class UsuarioService {
++
++    private final UsuarioRepository usuarioRepository;
++    private final PasswordUtils passwordUtils;
++
++    public UsuarioService(UsuarioRepository usuarioRepository, PasswordUtils passwordUtils) {
++        this.usuarioRepository = usuarioRepository;
++        this.passwordUtils = passwordUtils;
++    }
++
++    public Usuario cadastrar(String email, String senha, String papel) throws Exception {
++        if (!passwordUtils.validateFormat(email, senha)) {
++            throw new IllegalArgumentException("E-mail ou senha inválidos segundo as regras de formato.");
++        }
++        if (usuarioRepository.findByEmail(email).isPresent()) {
++            throw new IllegalArgumentException("E-mail já cadastrado.");
++        }
++
++        String salt = passwordUtils.generateSalt();
++        String hash = passwordUtils.hashPassword(senha, salt);
++
++        Usuario usuario = new Usuario(email, hash, salt, papel);
++        return usuarioRepository.save(usuario);
++    }
++
++    public Optional<Usuario> autenticar(String email, String senha) {
++        Optional<Usuario> opt = usuarioRepository.findByEmail(email);
++        if (opt.isPresent()) {
++            Usuario u = opt.get();
++            if (passwordUtils.validatePassword(senha, u.getSalt(), u.getSenha())) {
++                return Optional.of(u);
++            }
++        }
++        return Optional.empty();
++    }
++
++    public String gerarTokenRecuperacao(String email) {
++        Optional<Usuario> opt = usuarioRepository.findByEmail(email);
++        if (opt.isPresent()) {
++            Usuario u = opt.get();
++            String token = UUID.randomUUID().toString().replace("-", ""); // 32 caracteres
++            u.getTokenRecuperacao();
++            u.setTokenRecuperacao(token);
++            u.setValidadeToken(LocalDateTime.now().plusHours(24));
++            usuarioRepository.save(u);
++            return token;
++        }
++        return null;
++    }
++
++    public boolean alterarSenhaComToken(String token, String novaSenha) {
++        Optional<Usuario> opt = usuarioRepository.findByTokenRecuperacao(token);
++        if (opt.isPresent()) {
++            Usuario u = opt.get();
++            if (u.getValidadeToken() != null && u.getValidadeToken().isAfter(LocalDateTime.now())) {
++                if (!passwordUtils.validateFormat(u.getEmail(), novaSenha)) {
++                    return false;
++                }
++                String salt = passwordUtils.generateSalt();
++                u.setSenha(passwordUtils.hashPassword(novaSenha, salt));
++                u.setSalt(salt);
++                u.setTokenRecuperacao(null);
++                u.setValidadeToken(null);
++                usuarioRepository.save(u);
++                return true;
++            }
++        }
++        return false;
++    }
++    
++    public Optional<Usuario> buscarPorToken(String token) {
++        Optional<Usuario> opt = usuarioRepository.findByTokenRecuperacao(token);
++        if (opt.isPresent() && opt.get().getValidadeToken() != null && opt.get().getValidadeToken().isAfter(LocalDateTime.now())) {
++            return opt;
++        }
++        return Optional.empty();
++    }
++}
+diff --git a/src/main/resources/templates/auth/login.html b/src/main/resources/templates/auth/login.html
+new file mode 100644
+index 0000000..f932846
+--- /dev/null
++++ b/src/main/resources/templates/auth/login.html
+@@ -0,0 +1,51 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Autenticação</title>
++</head>
++<body>
++    <h2>DogTech - Autenticação (UC001)</h2>
++
++    <div th:if="${erro}" style="color: red;">
++        <p th:text="${erro}"></p>
++    </div>
++    <div th:if="${sucesso}" style="color: green;">
++        <p th:text="${sucesso}"></p>
++    </div>
++
++    <h3>Entrar</h3>
++    <form action="/login" method="post">
++        <label>E-mail: <span title="Insira apenas letras, números e um @, sem caracteres especiais proibidos">?</span></label>
++        <input type="text" name="email" required><br><br>
++        <label>Senha: <span title="Mínimo de 8 caracteres, sem caracteres especiais proibidos">?</span></label>
++        <input type="password" name="senha" required><br><br>
++        <button type="submit">Entrar</button>
++    </form>
++
++    <hr>
++
++    <h3>Cadastrar (Adotante / Admin)</h3>
++    <form action="/cadastro" method="post">
++        <label>E-mail:</label>
++        <input type="text" name="email" required><br><br>
++        <label>Senha:</label>
++        <input type="password" name="senha" required><br><br>
++        <label>Tipo:</label>
++        <select name="papel">
++            <option value="ADOTANTE">Adotante</option>
++            <option value="ADMIN">Administrador</option>
++        </select><br><br>
++        <button type="submit">Cadastrar</button>
++    </form>
++
++    <hr>
++
++    <h3>Esqueceu sua senha?</h3>
++    <form action="/recuperar-senha" method="post">
++        <label>E-mail:</label>
++        <input type="text" name="email" required><br><br>
++        <button type="submit">Recuperar</button>
++    </form>
++</body>
++</html>
+diff --git a/src/main/resources/templates/auth/nova-senha.html b/src/main/resources/templates/auth/nova-senha.html
+new file mode 100644
+index 0000000..1d00bee
+--- /dev/null
++++ b/src/main/resources/templates/auth/nova-senha.html
+@@ -0,0 +1,19 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head>
++    <meta charset="UTF-8">
++    <title>DogTech - Nova Senha</title>
++</head>
++<body>
++    <h2>DogTech - Inserir Nova Senha</h2>
++    <div th:if="${erro}" style="color: red;">
++        <p th:text="${erro}"></p>
++    </div>
++    <form action="/atualizar-senha" method="post">
++        <input type="hidden" name="token" th:value="${token}">
++        <label>Nova Senha:</label>
++        <input type="password" name="novaSenha" required><br><br>
++        <button type="submit">Enviar</button>
++    </form>
++</body>
++</html>
+diff --git a/src/main/resources/templates/home/admin.html b/src/main/resources/templates/home/admin.html
+new file mode 100644
+index 0000000..b473001
+--- /dev/null
++++ b/src/main/resources/templates/home/admin.html
+@@ -0,0 +1,8 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head><meta charset="UTF-8"><title>Home Admin</title></head>
++<body>
++    <h1>Bem-vindo à Tela Inicial Administrativa [PRT-2]</h1>
++    <a href="/login">Sair</a>
++</body>
++</html>
+diff --git a/src/main/resources/templates/home/adotante.html b/src/main/resources/templates/home/adotante.html
+new file mode 100644
+index 0000000..68d8102
+--- /dev/null
++++ b/src/main/resources/templates/home/adotante.html
+@@ -0,0 +1,8 @@
++<!DOCTYPE html>
++<html xmlns:th="http://www.thymeleaf.org">
++<head><meta charset="UTF-8"><title>Home Adotante</title></head>
++<body>
++    <h1>Bem-vindo à Tela Inicial do Adotante [PRT-3]</h1>
++    <a href="/login">Sair</a>
++</body>
++</html>
+diff --git a/src/test/java/com/tcc/iterativa/service/UsuarioServiceTest.java b/src/test/java/com/tcc/iterativa/service/UsuarioServiceTest.java
+new file mode 100644
+index 0000000..37998ce
+--- /dev/null
++++ b/src/test/java/com/tcc/iterativa/service/UsuarioServiceTest.java
+@@ -0,0 +1,55 @@
++package com.tcc.iterativa.service;
++
++import com.tcc.iterativa.config.PasswordUtils;
++import com.tcc.iterativa.model.Usuario;
++import com.tcc.iterativa.repository.UsuarioRepository;
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.context.SpringBootTest;
++
++import java.util.Optional;
++
++import static org.junit.jupiter.api.Assertions.*;
++
++@SpringBootTest
++class UsuarioServiceTest {
++
++    @Autowired
++    private UsuarioService usuarioService;
++
++    @Autowired
++    private UsuarioRepository usuarioRepository;
++
++    @BeforeEach
++    void setUp() {
++        usuarioRepository.deleteAll();
++    }
++
++    @Test
++    void testCadastroESucessoAutenticacao() throws Exception {
++        usuarioService.cadastrar("teste@dogtech.com", "senha1234", "ADOTANTE");
++        Optional<Usuario> user = usuarioService.autenticar("teste@dogtech.com", "senha1234");
++        assertTrue(user.isPresent());
++    }
++
++    @Test
++    void testCadastroFalhaFormatoEmail() {
++        assertThrows(IllegalArgumentException.class, () -> {
++            usuarioService.cadastrar("emailerrado.com", "senha1234", "ADOTANTE");
++        });
++    }
++
++    @Test
++    void testRecuperacaoSenha() throws Exception {
++        usuarioService.cadastrar("recupera@dogtech.com", "senha1234", "ADOTANTE");
++        String token = usuarioService.gerarTokenRecuperacao("recupera@dogtech.com");
++        assertNotNull(token);
++
++        boolean alterado = usuarioService.alterarSenhaComToken(token, "novasenha123");
++        assertTrue(alterado);
++
++        Optional<Usuario> user = usuarioService.autenticar("recupera@dogtech.com", "novasenha123");
++        assertTrue(user.isPresent());
++    }
++}

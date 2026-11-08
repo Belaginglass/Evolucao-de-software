@@ -1,0 +1,20 @@
+```json
+{
+  "arquivos": [
+    {
+      "caminho": "src/main/java/com/tcc/iterativa/config/SecurityConfig.java",
+      "acao": "modificar",
+      "conteudo": "package com.tcc.iterativa.config;\n\nimport org.springframework.context.annotation.Bean;\nimport org.springframework.context.annotation.Configuration;\nimport org.springframework.security.config.annotation.web.builders.HttpSecurity;\nimport org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;\nimport org.springframework.security.web.SecurityFilterChain;\n\n@Configuration\n@EnableWebSecurity\npublic class SecurityConfig {\n\n    @Bean\n    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {\n        http\n            .csrf(csrf -> csrf.disable())\n            .authorizeHttpRequests(auth -> auth\n                .requestMatchers(\"/\", \"/login\", \"/cadastro\", \"/recuperar-senha\", \"/atualizar-senha\", \"/buscar-cep\", \"/h2-console/**\").permitAll()\n                .requestMatchers(\"/animais/**\").hasRole(\"ADMIN\")\n                .anyRequest().authenticated()\n            )\n            .formLogin(form -> form.disable());\n        \n        return http.build();\n    }\n}\n"
+    }
+  ]
+}
+```
+
+(a) Arquivos criados/modificados/removidos:
+- Modificado: `src/main/java/com/tcc/iterativa/config/SecurityConfig.java`
+
+(b) Identificadores de requisitos atendidos:
+- RF002 / UC003 (Restrição de acesso a rotas de animais apenas para o papel administrativo ADMIN).
+
+(c) Suposições feitas:
+- A restrição via Spring Security (`requestMatchers("/animais/**").hasRole("ADMIN")`) é suficiente para bloquear tanto requisições GET quanto POST em `/animais/novo` para usuários sem o papel `ADMIN`, retornando o código 403 conforme solicitado.

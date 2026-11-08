@@ -1,0 +1,58 @@
+V2 = I2 (Cadastro e manutenção de usuários, UC002/UC011/RF010/RN002/RN011/RNF002).
+
+RESUMO DO PROCESSO DE GERAÇÃO (ver resultados/log_dificuldades_geracao.md para o
+detalhe completo):
+- Tentativa 1: JSON inválido — aspas duplas literais dentro de um literal Java
+  (ex.: @Table(name = "telefones")) não escapadas como \" no valor da string JSON.
+  Corrigido reforçando a instrução de escaping no prompt (não o conteúdo gerado).
+- Tentativa 2: aplicada com sucesso (11 arquivos, estendendo o código de I1 em vez
+  de recriá-lo, como pedido).
+- Avaliação: FALHA de compilação — teste novo sem `import java.util.Optional`.
+- Tentativa 3 (correção): corrigiu o import, mas revelou uma FALHA DE AMBIENTE (não
+  do código gerado): o Hibernate (ddl-auto=update) tentou ALTER TABLE para adicionar
+  uma coluna UNIQUE (provavelmente "cpf") no banco .db deixado por V1/V0, e o SQLite
+  não aceita ALTER TABLE ADD COLUMN UNIQUE. Corrigido no PIPELINE
+  (scripts/avaliar_projeto.py agora reseta o banco antes de cada avaliação — cada
+  versão parte de esquema limpo), não no código do Gemini.
+- (Durante a investigação, dois processos Java órfãos de um teste anterior ficaram
+  travados segurando o arquivo do banco; o sandbox bloqueou o taskkill automático e
+  o pesquisador autorizou manualmente.)
+- Após o reset do banco, novo erro real: "Ambiguous mapping" — GET /meus-dados
+  mapeado simultaneamente em UsuarioController e AuthController.
+- Tentativa 4 (correção): removeu a duplicata, mantendo a rota em UsuarioController.
+  Novo erro: SQLite JDBC não implementa ResultSet.getBlob() — o campo de foto
+  estava mapeado como @Lob/byte[] (BLOB).
+- Tentativa 5 (correção): trocou o campo de foto para String (Base64) em coluna
+  TEXT comum. Compilação e os 8 testes JUnit passaram.
+- Teste manual (HTTP): GET /buscar-cep retornava HTTP 403 — rota não incluída na
+  lista de endpoints públicos do SecurityConfig, mas usada durante o cadastro
+  (antes de autenticar). Não capturado por nenhum teste JUnit do Gemini.
+- Tentativa 6 (correção): adicionou "/buscar-cep" à lista de rotas públicas.
+  Confirmado por novo teste manual: HTTP 200 com o endereço correto.
+
+Total: 6 chamadas à API para fechar V2 (preservadas em
+resultados/V2/tentativas/tentativa_01 a tentativa_06).
+
+REGRESSÃO (I1, re-testado após I2): CT001, CT002, CT003, CT004 continuam Aprovados
+— nenhuma regressão introduzida pelas mudanças de I2.
+
+RESULTADOS DOS CASOS DE TESTE FUNCIONAIS DE I2:
+- CT006 (RN002, cadastro completo): Aprovado.
+- CT007 (RN002, e-mail/CPF duplicado): Aprovado.
+- CT008 (RN002, sem telefone): Aprovado.
+- CT009 (RNF002, busca de CEP local): Aprovado (após a correção da tentativa 6).
+- CT010 (RF010/UC011, atualizar dados pessoais): Aprovado.
+- CT011 (RN011, link de confirmação/reversão): REPROVADO — o sistema salva a data
+  da alteração e gera um token/link (parcialmente conforme a regra), mas o link
+  apenas redefine a senha (reaproveita o mecanismo de UC001); não existe, nesta
+  versão, nenhuma reversão real das alterações nem histórico de atividades para
+  desfazer, como a RN011 descreve literalmente. Decisão: não solicitar uma nova
+  chamada de correção para isto agora — implementar um mecanismo de auditoria/
+  reversão de atividades estaria fora do escopo direto deste incremento (UC011
+  não detalha esse mecanismo); fica registrado como gap para uma decisão futura
+  do pesquisador (ex.: endereçar em um incremento futuro, ou aceitar como
+  limitação conhecida do experimento).
+
+Taxa de aprovação (TA) de V2 (CTs de V2 apenas): 5 aprovados / 6 executados = 83,3%.
+TA cumulativa (I1+I2, todas as execuções registradas para V2): ver aba "Suíte
+Acumulativa" de testes/casos_teste.xlsx.

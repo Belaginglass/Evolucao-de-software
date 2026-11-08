@@ -1,0 +1,9 @@
+Resultado: Sucesso
+
+mvn clean compile: sucesso, sem erros.
+mvn test (contextLoads): sucesso.
+mvn verify (JaCoCo): sucesso, relatório gerado.
+spring-boot:run (execução real): Tomcat iniciado na porta 8080 em ~3,3s; GET / respondeu HTTP 404 (esperado, nenhuma rota implementada ainda). Processo finalizado após a verificação.
+Nenhum erro de compilação ou execução.
+
+Detalhe completo em resultados/V0/registro_V0.md.

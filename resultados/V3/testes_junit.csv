@@ -1,0 +1,12 @@
+classe,metodo,situacao,tempo_s,mensagem_erro
+com.tcc.iterativa.GeracaoIterativaApplicationTests,contextLoads,Aprovado,0.495,
+com.tcc.iterativa.service.AnimalServiceI3Test,testRegraAutomaticaPatrimonioTombado,Aprovado,0.322,
+com.tcc.iterativa.service.AnimalServiceI3Test,testCadastrarAnimalSucesso,Aprovado,0.062,
+com.tcc.iterativa.service.AnimalServiceI3Test,testCadastrarAnimalFalhaFaltaObrigatorio,Aprovado,0.025,
+com.tcc.iterativa.service.UsuarioServiceI2Test,testBuscaCepLocal,Aprovado,0.031,
+com.tcc.iterativa.service.UsuarioServiceI2Test,testAtualizarDadosPessoais,Aprovado,0.107,
+com.tcc.iterativa.service.UsuarioServiceI2Test,testCadastroFalhaSemTelefone,Aprovado,0.024,
+com.tcc.iterativa.service.UsuarioServiceI2Test,testCadastroCompletoSucesso,Aprovado,0.025,
+com.tcc.iterativa.service.UsuarioServiceTest,testCadastroESucessoAutenticacao,Aprovado,0.038,
+com.tcc.iterativa.service.UsuarioServiceTest,testCadastroFalhaFormatoEmail,Aprovado,0.015,
+com.tcc.iterativa.service.UsuarioServiceTest,testRecuperacaoSenha,Aprovado,0.048,

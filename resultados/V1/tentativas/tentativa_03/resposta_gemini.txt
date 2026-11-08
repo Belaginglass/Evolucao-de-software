@@ -1,0 +1,109 @@
+```json
+{
+  "arquivos": [
+    {
+      "caminho": "src/main/java/com/tcc/iterativa/config/SecurityConfig.java",
+      "acao": "criar",
+      "conteudo": "package com.tcc.iterativa.config;\n\nimport org.springframework.context.annotation.Bean;\nimport org.springframework.context.annotation.Configuration;\nimport org.springframework.security.config.annotation.web.builders.HttpSecurity;\nimport org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;\nimport org.springframework.security.web.SecurityFilterChain;\n\n@Configuration\n@EnableWebSecurity\npublic class SecurityConfig {\n\n    @Bean\n    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {\n        http\n            .csrf(csrf -> csrf.disable())\n            .authorizeHttpRequests(auth -> auth\n                .requestMatchers(\"/\", \"/auth/**\", \"/css/**\", \"/js/**\").permitAll()\n                .anyRequest().authenticated()\n            )\n            .formLogin(form -> form.disable());\n        \n        return http.build();\n    }\n}\n"
+    },
+    {
+      "caminho": "com/tcc/iterativa/config/SenhaConfig.java",
+      "acao": "remover",
+      "conteudo": ""
+    },
+    {
+      "caminho": "src/main/java/com/tcc/iterativa/model/Usuario.java",
+      "acao": "criar",
+      "conteudo": "package com.tcc.iterativa.model;\n\nimport jakarta.persistence.Entity;\nimport jakarta.persistence.GeneratedValue;\nimport jakarta.persistence.GenerationType;\nimport jakarta.persistence.Id;\nimport jakarta.persistence.Table;\nimport java.time.LocalDateTime;\n\n@Entity\n@Table(name = \"usuarios\")\npublic class Usuario {\n\n    @Id\n    @GeneratedValue(strategy = GenerationType.IDENTITY)\n    private Long id;\n\n    private String email;\n    private String senha;\n    private String salt;\n    private String papel; // \"ADMIN\" ou \"ADOTANTE\"\n\n    private String resetToken;\n    private LocalDateTime resetTokenExpiration;\n\n    public Usuario() {}\n\n    public Usuario(String email, String senha, String salt, String papel) {\n        this.email = email;\n        this.senha = senha;\n        this.salt = salt;\n        this.papel = papel;\n    }\n\n    public Long getId() { return id; }\n    public void setId(Long id) { this.id = id; }\n\n    public String getEmail() { return email; }\n    public void setEmail(String email) { this.email = email; }\n\n    public String getSenha() { return senha; }\n    public void setSenha(String senha) { this.senha = senha; }\n\n    public String getSalt() { return salt; }\n    public void setSalt(String salt) { this.salt = salt; }\n\n    public String getPapel() { return papel; }\n    public void setPapel(String papel) { this.papel = papel; }\n\n    public String getResetToken() { return resetToken; }\n    public void setResetToken(String resetToken) { this.resetToken = resetToken; }\n\n    public LocalDateTime getResetTokenExpiration() { return resetTokenExpiration; }\n    public void setResetTokenExpiration(LocalDateTime resetTokenExpiration) { this.resetTokenExpiration = resetTokenExpiration; }\n}\n"
+    },
+    {
+      "caminho": "src/main/java/com/tcc/iterativa/repository/UsuarioRepository.java",
+      "acao": "criar",
+      "conteudo": "package com.tcc.iterativa.repository;\n\nimport com.tcc.iterativa.model.Usuario;\nimport org.springframework.data.jpa.repository.JpaRepository;\nimport java.util.Optional;\n\npublic interface UsuarioRepository extends JpaRepository<Usuario, Long> {\n    Optional<Usuario> findByEmail(String email);\n    Optional<Usuario> findByResetToken(String resetToken);\n}\n"
+    },
+    {
+      "caminho": "src/main/java/com/tcc/iterativa/service/SenhaService.java",
+      "acao": "criar",
+      "conteudo": "package com.tcc.iterativa.service;\n\nimport org.springframework.stereotype.Service;\nimport java.security.MessageDigest;\nimport java.security.NoSuchAlgorithmException;\nimport java.security.SecureRandom;\nimport java.util.Base64;\n\n@Service\npublic class SenhaService {\n\n    public String gerarSalt() {\n        SecureRandom sr = new SecureRandom();\n        byte[] salt = new byte[1]; // 8 bits = 1 byte\n        sr.nextBytes(salt);\n        return Base64.getEncoder().encodeToString(salt);\n    }\n\n    public String criptografarSenha(String senhaPura, String salt) {\n        try {\n            MessageDigest md = MessageDigest.getInstance(\"SHA-256\");\n            md.update(Base64.getDecoder().decode(salt));\n            byte[] hash = md.digest(senhaPura.getBytes());\n            return Base64.getEncoder().encodeToString(hash);\n        } catch (NoSuchAlgorithmException e) {\n            throw new RuntimeException(\"Erro ao criptografar senha com SHA-256\", e);\n        }\n    }\n\n    public boolean validarSenha(String senhaPura, String salt, String hashArmazenado) {\n        String hashCalculado = criptografarSenha(senhaPura, salt);\n        return hashCalculado.equals(hashArmazenado);\n    }\n}\n"
+    },
+    {
+      "caminho": "src/main/java/com/tcc/iterativa/service/ValidacaoService.java",
+      "acao": "criar",
+      "conteudo": "package com.tcc.iterativa.service;\n\nimport org.springframework.stereotype.Service;\nimport java.util.regex.Pattern;\n\n@Service\npublic class ValidacaoService {\n\n    // Caracteres proibidos: <, >, \", ', /, \\, :, |\n    private static final Pattern CARACTERES_PROIBIDOS = Pattern.compile(\"[<>\\\"'/:|\\\\\\\"]\");\n    private static final Pattern EMAIL_PATTERN = Pattern.compile(\"^[A-Za-z0-9@.]*$\");\n\n    public boolean validarEmail(String email) {\n        if (email == null || email.isEmpty()) {\n            return false;\n        }\n        if (CARACTERES_PROIBIDOS.matcher(email).find()) {\n            return false;\n        }\n        if (!EMAIL_PATTERN.matcher(email).matches()) {\n            return false;\n        }\n        long atCount = email.chars().filter(ch -> ch == '@').count();\n        if (atCount != 1) {\n            return false;\n        }\n        return true;\n    }\n\n    public boolean validarSenha(String senha) {\n        if (senha == null || senha.length() < 8) {\n            return false;\n        }\n        if (CARACTERES_PROIBIDOS.matcher(senha).find()) {\n            return false;\n        }\n        return true;\n    }\n}\n"
+    },
+    {
+      "caminho": "src/main/java/com/tcc/iterativa/service/AuthService.java",
+      "acao": "criar",
+      "conteudo": "package com.tcc.iterativa.service;\n\nimport com.tcc.iterativa.model.Usuario;\nimport com.tcc.iterativa.repository.UsuarioRepository;\nimport org.springframework.stereotype.Service;\n\nimport java.time.LocalDateTime;\nimport java.util.Optional;\nimport java.util.UUID;\n\n@Service\npublic class AuthService {\n\n    private final UsuarioRepository usuarioRepository;\n    private final SenhaService senhaService;\n    private final ValidacaoService validacaoService;\n\n    public AuthService(UsuarioRepository usuarioRepository, SenhaService senhaService, ValidacaoService validacaoService) {\n        this.usuarioRepository = usuarioRepository;\n        this.senhaService = senhaService;\n        this.validacaoService = validacaoService;\n    }\n\n    public Usuario autenticar(String email, String senha) {\n        Optional<Usuario> optUser = usuarioRepository.findByEmail(email);\n        if (optUser.isPresent()) {\n            Usuario usuario = optUser.get();\n            if (senhaService.validarSenha(senha, usuario.getSalt(), usuario.getSenha())) {\n                return usuario;\n            }\n        }\n        return null;\n    }\n\n    public boolean cadastrar(String email, String senha, String papel) {\n        if (!validacaoService.validarEmail(email) || !validacaoService.validarSenha(senha)) {\n            return false;\n        }\n        if (usuarioRepository.findByEmail(email).isPresent()) {\n            return false;\n        }\n        String salt = senhaService.gerarSalt();\n        String hashSenha = senhaService.criptografarSenha(senha, salt);\n        Usuario usuario = new Usuario(email, hashSenha, salt, papel);\n        usuarioRepository.save(usuario);\n        return true;\n    }\n\n    public String gerarTokenRecuperacao(String email) {\n        Optional<Usuario> optUser = usuarioRepository.findByEmail(email);\n        if (optUser.isPresent()) {\n            Usuario usuario = optUser.get();\n            String token = UUID.randomUUID().toString(); // 32 chars\n            usuario.setResetToken(token);\n            usuario.setResetTokenExpiration(LocalDateTime.now().plusHours(24));\n            usuarioRepository.save(usuario);\n            return token;\n        }\n        return null;\n    }\n\n    public boolean redefinirSenha(String token, novaSenha) {\n        Optional<Usuario> optUser = usuarioRepository.findByResetToken(token);\n        if (optUser.isPresent()) {\n            Usuario usuario = optUser.get();\n            if (usuario.getResetTokenExpiration() != null && LocalDateTime.now().isBefore(usuario.getResetTokenExpiration())) {\n                if (!validacaoService.validarSenha(novaSenha)) {\n                    return false;\n                }\n                String salt = senhaService.gerarSalt();\n                usuario.setSenha(senhaService.criptografarSenha(novaSenha, salt));\n                usuario.setSalt(salt);\n                usuario.setResetToken(null);\n                usuario.setResetTokenExpiration(null);\n                usuarioRepository.save(usuario);\n                return true;\n            }\n        }\n        return false;\n    }\n}\n"
+    },
+    {
+      "caminho": "src/main/java/com/tcc/iterativa/controller/AuthController.java",
+      "acao": "criar",
+      "conteudo": "package com.tcc.iterativa.controller;\n\nimport com.tcc.iterativa.model.Usuario;\nimport com.tcc.iterativa.service.AuthService;\nimport jakarta.servlet.http.HttpSession;\nimport org.springframework.stereotype.Controller;\nimport org.springframework.ui.Model;\nimport org.springframework.web.bind.annotation.*;\n\n@Controller\n@RequestMapping(\"/auth\")\npublic class AuthController {\n\n    private final AuthService authService;\n\n    public AuthController(AuthService authService) {\n        this.authService = authService;\n    }\n\n    @GetMapping(\"/login\")\n    public String exibirLogin() {\n        return \"auth/login\";\n    }\n\n    @PostMapping(\"/login\")\n    public String processarLogin(@RequestParam String email, @RequestParam String senha, HttpSession session, Model model) {\n        Usuario usuario = authService.autenticar(email, senha);\n        if (usuario != null) {\n            session.setAttribute(\"usuarioLogado\", usuario);\n            if (\"ADMIN\".equals(usuario.getPapel())) {\n                return \"redirect:/home/admin\";\n            } else {\n                return \"redirect:/home/adotante\";\n            }\n        }\n        model.addAttribute(\"erro\", \"E-mail ou senha inválidos.\");\n        return \"auth/login\";\n    }\n\n    @PostMapping(\"/cadastrar\")\n    public String processarCadastro(@RequestParam String email, @RequestParam String senha, @RequestParam String papel, Model model) {\n        boolean sucesso = authService.cadastrar(email, senha, papel);\n        if (sucesso) {\n            model.addAttribute(\"mensagem\", \"Cadastro realizado com sucesso! Faça login.\");\n        } else {\n            model.addAttribute(\"erroCadastro\", \"Erro ao cadastrar. Verifique o e-mail, senha (mín. 8 caracteres, sem caracteres proibidos) ou se o e-mail já existe.\");\n        }\n        return \"auth/login\";\n    }\n\n    @PostMapping(\"/recuperar\")\n    public String processarRecuperacao(@RequestParam String email, Model model) {\n        String token = authService.gerarTokenRecuperacao(email);\n        if (token != null) {\n            // Simulando envio de e-mail mostrando o link na tela para fins do teste\n            model.addAttribute(\"mensagemRecuperacao\", \"Link de recuperação gerado: /auth/redefinir?token=\" + token);\n        } else {\n            model.addAttribute(\"mensagemRecuperacao\", \"Se o e-mail existir, um link foi enviado.\");\n        }\n        return \"auth/login\";\n    }\n\n    @GetMapping(\"/redefinir\")\n    public String exibirRedefinir(@RequestParam String token, Model model) {\n        model.addAttribute(\"token\", token);\n        return \"auth/redefinir\";\n    }\n\n    @PostMapping(\"/redefinir\")\n    public String processarRedefinir(@RequestParam String token, @RequestParam String novaSenha, Model model) {\n        boolean sucesso = authService.redefinirSenha(token, novaSenha);\n        if (sucesso) {\n            model.addAttribute(\"mensagem\", \"Senha redefinida com sucesso!\");\n            return \"auth/login\";\n        } else {\n            model.addAttribute(\"erro\", \"Token inválido ou expirado, ou senha fora dos padrões.\");\n            model.addAttribute(\"token\", token);\n            return \"auth/redefinir\";\n        }\n    }\n\n    @GetMapping(\"/logout\")\n    public String logout(HttpSession session) {\n        session.invalidate();\n        return \"redirect:/auth/login\";\n    }\n}\n"
+    },
+    {
+      "caminho": "src/main/java/com/tcc/iterativa/controller/HomeController.java",
+      "acao": "criar",
+      "conteudo": "package com.tcc.iterativa.controller;\n\nimport org.springframework.stereotype.Controller;\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.RequestMapping;\n\n@Controller\n@RequestMapping(\"/home\")\npublic class HomeController {\n\n    @GetMapping(\"/admin\")\n    public String homeAdmin() {\n        return \"home/admin\";\n    }\n\n    @GetMapping(\"/adotante\")\n    public String homeAdotante() {\n        return \"home/adotante\";\n    }\n}\n"
+    },
+    {
+      "caminho": "src/main/resources/templates/auth/login.html",
+      "acao": "criar",
+      "conteudo": "<!DOCTYPE html>\n<html xmlns:th=\"http://www.thymeleaf.org\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>DogTech - Autenticação</title>\n</head>\n<body>\n    <h1>DogTech - SGA</h1>\n    \n    <div th:if=\"${erro}\" style=\"color: red;\" th:text=\"${erro}\"></div>\n    <div th:if=\"${mensagem}\" style=\"color: green;\" th:text=\"${mensagem}\"></div>\n    <div th:if=\"${mensagemRecuperacao}\" style=\"color: blue;\" th:text=\"${mensagemRecuperacao}\"></div>\n\n    <h2>Login</h2>\n    <form action=\"/auth/login\" method=\"post\">\n        <label>E-mail: <span title=\"Digite um e-mail válido contendo @ e sem caracteres especiais proibidos.\">?</span></label>\n        <input type=\"text\" name=\"email\" required /><br/>\n        \n        <label>Senha: <span title=\"Mínimo de 8 caracteres, sem caracteres proibidos (<, >, \", ', /, \\, :, |).\">?</span></label>\n        <input type=\"password\" name=\"senha\" required /><br/>\n        \n        <button type=\"submit\">Entrar</button>\n    </form>\n\n    <h2>Cadastro</h2>\n    <div th:if=\"${erroCadastro}\" style=\"color: red;\" th:text=\"${erroCadastro}\"></div>\n    <form action=\"/auth/cadastrar\" method=\"post\">\n        <label>E-mail:</label>\n        <input type=\"text\" name=\"email\" required /><br/>\n        \n        <label>Senha:</label>\n        <input type=\"password\" name=\"senha\" required /><br/>\n        \n        <label>Tipo de Usuário:</label>\n        <select name=\"papel\">\n            <option value=\"ADOTANTE\">Adotante</option>\n            <option value=\"ADMIN\">Administrativo</option>\n        </select><br/>\n        \n        <button type=\"submit\">Cadastrar</button>\n    </form>\n\n    <h2>Recuperar Senha</h2>\n    <form action=\"/auth/recuperar\" method=\"post\">\n        <label>E-mail:</label>\n        <input type=\"text\" name=\"email\" required /><br/>\n        <button type=\"submit\">Recuperar</button>\n    </form>\n</body>\n</html>\n"
+    },
+    {
+      "caminho": "src/main/resources/templates/auth/redefinir.html",
+      "acao": "criar",
+      "conteudo": "<!DOCTYPE html>\n<html xmlns:th=\"http://www.thymeleaf.org\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>DogTech - Nova Senha</title>\n</head>\n<body>\n    <h1>DogTech - Redefinição de Senha</h1>\n    <div th:if=\"${erro}\" style=\"color: red;\" th:text=\"${erro}\"></div>\n    \n    <form action=\"/auth/redefinir\" method=\"post\">\n        <input type=\"hidden\" name=\"token\" th:value=\"${token}\" />\n        <label>Nova Senha: <span title=\"Mínimo de 8 caracteres, sem caracteres proibidos.\">?</span></label>\n        <input type=\"password\" name=\"novaSenha\" required /><br/>\n        <button type=\"submit\">Enviar</button>\n    </form>\n</body>\n</html>\n"
+    },
+    {
+      "caminho": "src/main/resources/templates/home/admin.html",
+      "acao": "criar",
+      "conteudo": "<!DOCTYPE html>\n<html xmlns:th=\"http://www.thymeleaf.org\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>DogTech - Home Administrativa</title>\n</head>\n<body>\n    <h1>Painel Administrativo</h1>\n    <p>Bem-vindo à área administrativa (PRT-2).</p>\n    <a href=\"/auth/logout\">Sair</a>\n</body>\n</html>\n"
+    },
+    {
+      "caminho": "src/main/resources/templates/home/adotante.html",
+      "acao": "criar",
+      "conteudo": "<!DOCTYPE html>\n<html xmlns:th=\"http://www.thymeleaf.org\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>DogTech - Home Adotante</title>\n</head>\n<body>\n    <h1>Painel do Adotante</h1>\n    <p>Bem-vindo à área do adotante (PRT-3).</p>\n    <a href=\"/auth/logout\">Sair</a>\n</body>\n</html>\n"
+    },
+    {
+      "caminho": "src/test/java/com/tcc/iterativa/AuthServiceTest.java",
+      "acao": "criar",
+      "conteudo": "package com.tcc.iterativa;\n\nimport com.tcc.iterativa.model.Usuario;\nimport com.tcc.iterativa.service.AuthService;\nimport org.junit.jupiter.api.Test;\nimport org.springframework.beans.factory.annotation.Autowired;\nimport org.springframework.boot.test.context.SpringBootTest;\n\nimport static org.junit.jupiter.api.Assertions.*;\n\n@SpringBootTest\nclass AuthServiceTest {\n\n    @Autowired\n    private AuthService authService;\n\n    @Test\n    void testCadastroESucessoAutenticacao() {\n        String email = \"teste\" + System.currentTimeMillis() + \"@dogtech.com\";\n        boolean cadastrado = authService.cadastrar(email, \"senha1234\", \"ADOTANTE\");\n        assertTrue(cadastrado);\n\n        Usuario usuario = authService.autenticar(email, \"senha1234\");\n        assertNotNull(usuario);\n        assertEquals(email, usuario.getEmail());\n    }\n\n    @Test\n    void testFalhaAutenticacaoSenhaErrada() {\n        String email = \"testeerrado\" + System.currentTimeMillis() + \"@dogtech.com\";\n        authService.cadastrar(email, \"senha1234\", \"ADOTANTE\");\n\n        Usuario usuario = authService.autenticar(email, \"senhaerrada\");\n        assertNull(usuario);\n    }\n\n    @Test\n    void testValidacaoEmailSenhaInvalidos() {\n        boolean cadastrado = authService.cadastrar(\"emailinv<o>\", \"123\", \"ADOTANTE\");\n        assertFalse(cadastrado);\n    }\n}\n"
+    }
+  ]
+}
+```
+
+### Resumo da Execução
+
+**(a) Arquivos criados, modificados ou removidos:**
+- **Criados:**
+  - `src/main/java/com/tcc/iterativa/config/SecurityConfig.java`
+  - `src/main/java/com/tcc/iterativa/model/Usuario.java`
+  - `src/main/java/com/tcc/iterativa/repository/UsuarioRepository.java`
+  - `src/main/java/com/tcc/iterativa/service/SenhaService.java`
+  - `src/main/java/com/tcc/iterativa/service/ValidacaoService.java`
+  - `src/main/java/com/tcc/iterativa/service/AuthService.java`
+  - `src/main/java/com/tcc/iterativa/controller/AuthController.java`
+  - `src/main/java/com/tcc/iterativa/controller/HomeController.java`
+  - `src/main/resources/templates/auth/login.html`
+  - `src/main/resources/templates/auth/redefinir.html`
+  - `src/main/resources/templates/home/admin.html`
+  - `src/main/resources/templates/home/adotante`
+  - `src/test/java/com/tcc/iterativa/AuthServiceTest.java`
+- **Removidos:**
+  - `com/tcc/iterativa/config/SenhaConfig.java` (substituído pela lógica consolidada em `SenhaService`)
+
+**(b) Identificadores de requisitos atendidos:**
+- `RF001` (Autenticação - adaptado para página única conforme Apêndice C.1)
+- `RNF001` (Criptografia SHA-256 e salt de 8 bits via componente único `SenhaService`)
+- `RNF003` (Arquitetura MVC / SOA / DAO)
+- `RNF008` (Campo de ajuda com ícones "?" nos formulários)
+- `RN001` (Validação de e-mail e senha)
+- `RN005` (Geração de token de recuperação de senha via UUID de 32 caracteres com validade de 24h)
+- `RN010` (Redirecionamento baseado no privilégio do usuário pós-login)
+
+**(c) Suposições e simplificações feitas:**
+- Como a página inicial completa (Incremento I4 / UC009) ainda não foi implementada neste incremento, o redirecionamento pós-login (`RN010`) foi direcionado para rotas provisórias simples (`/home/admin` e `/home/adotante`) para validar o fluxo de autenticação e controle de acesso inicial.
+- O envio do link de recuperação de senha por e-mail real foi simulado exibindo o link diretamente na interface web para facilitar a execução dos testes funcionais e automatizados.

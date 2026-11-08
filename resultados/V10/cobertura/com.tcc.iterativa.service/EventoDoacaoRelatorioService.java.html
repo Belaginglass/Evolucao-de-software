@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="pt"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EventoDoacaoRelatorioService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">geracao-iterativa</a> &gt; <a href="index.source.html" class="el_package">com.tcc.iterativa.service</a> &gt; <span class="el_source">EventoDoacaoRelatorioService.java</span></div><h1>EventoDoacaoRelatorioService.java</h1><pre class="source lang-java linenums">package com.tcc.iterativa.service;
+
+import com.tcc.iterativa.model.Evento;
+import com.tcc.iterativa.model.PedidoDoacao;
+import com.tcc.iterativa.repository.EventoRepository;
+import com.tcc.iterativa.repository.PedidoDoacaoRepository;
+import com.tcc.iterativa.repository.AnimalRepository;
+import com.tcc.iterativa.repository.AdocaoRepository;
+import com.tcc.iterativa.repository.UsuarioRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDate;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Service
+public class EventoDoacaoRelatorioService {
+
+    private final EventoRepository eventoRepository;
+    private final PedidoDoacaoRepository pedidoDoacaoRepository;
+    private final AnimalRepository animalRepository;
+    private final AdocaoRepository adocaoRepository;
+    private final UsuarioRepository usuarioRepository;
+
+    public EventoDoacaoRelatorioService(
+            EventoRepository eventoRepository,
+            PedidoDoacaoRepository pedidoDoacaoRepository,
+            AnimalRepository animalRepository,
+            AdocaoRepository adocaoRepository,
+<span class="fc" id="L35">            UsuarioRepository usuarioRepository) {</span>
+<span class="fc" id="L36">        this.eventoRepository = eventoRepository;</span>
+<span class="fc" id="L37">        this.pedidoDoacaoRepository = pedidoDoacaoRepository;</span>
+<span class="fc" id="L38">        this.animalRepository = animalRepository;</span>
+<span class="fc" id="L39">        this.adocaoRepository = adocaoRepository;</span>
+<span class="fc" id="L40">        this.usuarioRepository = usuarioRepository;</span>
+<span class="fc" id="L41">    }</span>
+
+    public List&lt;Evento&gt; listarEventosPublicos() {
+<span class="fc" id="L44">        return eventoRepository.findAllByOrderByDataAsc();</span>
+    }
+
+    public Optional&lt;Evento&gt; buscarEventoPorId(Long id) {
+<span class="nc" id="L48">        return eventoRepository.findById(id);</span>
+    }
+
+    public Evento salvarEvento(String nome, LocalDate data, String descricao, MultipartFile[] fotosFiles) throws Exception {
+<span class="fc" id="L52">        String fotosStr = processarFotos(fotosFiles);</span>
+<span class="fc" id="L53">        Evento evento = new Evento(nome, data, descricao, fotosStr);</span>
+<span class="fc" id="L54">        return eventoRepository.save(evento);</span>
+    }
+
+    public Evento atualizarEvento(Long id, String nome, LocalDate data, String descricao, MultipartFile[] fotosFiles) throws Exception {
+<span class="nc" id="L58">        Optional&lt;Evento&gt; opt = eventoRepository.findById(id);</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">        if (opt.isEmpty()) throw new IllegalArgumentException(&quot;Evento não encontrado.&quot;);</span>
+<span class="nc" id="L60">        Evento evento = opt.get();</span>
+<span class="nc" id="L61">        evento.setNome(nome);</span>
+<span class="nc" id="L62">        evento.setData(data);</span>
+<span class="nc" id="L63">        evento.setDescricao(descricao);</span>
+<span class="nc" id="L64">        String fotosStr = processarFotos(fotosFiles);</span>
+<span class="nc bnc" id="L65" title="All 2 branches missed.">        if (fotosStr != null) {</span>
+<span class="nc" id="L66">            evento.setFotos(fotosStr);</span>
+        }
+<span class="nc" id="L68">        return eventoRepository.save(evento);</span>
+    }
+
+    public void deletarEvento(Long id) {
+<span class="nc" id="L72">        eventoRepository.deleteById(id);</span>
+<span class="nc" id="L73">    }</span>
+
+    public List&lt;PedidoDoacao&gt; listarPedidosDoacaoPublicos() {
+<span class="fc" id="L76">        return pedidoDoacaoRepository.findAllByOrderByDataValidadeAsc();</span>
+    }
+
+    public Optional&lt;PedidoDoacao&gt; buscarPedidoDoacaoPorId(Long id) {
+<span class="nc" id="L80">        return pedidoDoacaoRepository.findById(id);</span>
+    }
+
+    public PedidoDoacao salvarPedidoDoacao(String titulo, Double valorSugerido, String descricao, LocalDate dataValidade, MultipartFile[] fotosFiles) throws Exception {
+<span class="fc" id="L84">        String fotosStr = processarFotos(fotosFiles);</span>
+<span class="fc" id="L85">        PedidoDoacao pedido = new PedidoDoacao(titulo, valorSugerido, descricao, dataValidade, fotosStr);</span>
+<span class="fc" id="L86">        return pedidoDoacaoRepository.save(pedido);</span>
+    }
+
+    public PedidoDoacao atualizarPedidoDoacao(Long id, String titulo, Double valorSugerido, String descricao, LocalDate dataValidade, MultipartFile[] fotosFiles) throws Exception {
+<span class="nc" id="L90">        Optional&lt;PedidoDoacao&gt; opt = pedidoDoacaoRepository.findById(id);</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        if (opt.isEmpty()) throw new IllegalArgumentException(&quot;Pedido de doação não encontrado.&quot;);</span>
+<span class="nc" id="L92">        PedidoDoacao pedido = opt.get();</span>
+<span class="nc" id="L93">        pedido.setTitulo(titulo);</span>
+<span class="nc" id="L94">        pedido.setValorSugerido(valorSugerido);</span>
+<span class="nc" id="L95">        pedido.setDescricao(descricao);</span>
+<span class="nc" id="L96">        pedido.setDataValidade(dataValidade);</span>
+<span class="nc" id="L97">        String fotosStr = processarFotos(fotosFiles);</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">        if (fotosStr != null) {</span>
+<span class="nc" id="L99">            pedido.setFotos(fotosStr);</span>
+        }
+<span class="nc" id="L101">        return pedidoDoacaoRepository.save(pedido);</span>
+    }
+
+    public void deletarPedidoDoacao(Long id) {
+<span class="nc" id="L105">        pedidoDoacaoRepository.deleteById(id);</span>
+<span class="nc" id="L106">    }</span>
+
+    public Map&lt;String, Object&gt; gerarRelatoriosConsolidados() {
+<span class="fc" id="L109">        Map&lt;String, Object&gt; relatorios = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L110">        relatorios.put(&quot;totalAnimais&quot;, animalRepository.count());</span>
+<span class="fc" id="L111">        relatorios.put(&quot;totalAdocoes&quot;, adocaoRepository.count());</span>
+<span class="fc" id="L112">        relatorios.put(&quot;totalUsuarios&quot;, usuarioRepository.count());</span>
+<span class="fc" id="L113">        relatorios.put(&quot;totalEventos&quot;, eventoRepository.count());</span>
+<span class="fc" id="L114">        relatorios.put(&quot;totalPedidosDoacao&quot;, pedidoDoacaoRepository.count());</span>
+        
+<span class="fc" id="L116">        Map&lt;String, Long&gt; adocoesPorEstado = adocaoRepository.findAll().stream()</span>
+<span class="pc bnc" id="L117" title="All 2 branches missed.">            .collect(Collectors.groupingBy(a -&gt; a.getEstado() != null ? a.getEstado() : &quot;DESCONHECIDO&quot;, Collectors.counting()));</span>
+<span class="fc" id="L118">        relatorios.put(&quot;adocoesPorEstado&quot;, adocoesPorEstado);</span>
+        
+<span class="fc" id="L120">        return relatorios;</span>
+    }
+
+    private String processarFotos(MultipartFile[] fotosFiles) throws Exception {
+<span class="pc bpc" id="L124" title="3 of 4 branches missed.">        if (fotosFiles == null || fotosFiles.length == 0) return null;</span>
+<span class="nc" id="L125">        StringBuilder sb = new StringBuilder();</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">        for (MultipartFile f : fotosFiles) {</span>
+<span class="nc bnc" id="L127" title="All 4 branches missed.">            if (f != null &amp;&amp; !f.isEmpty()) {</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">                if (sb.length() &gt; 0) sb.append(&quot;;&quot;);</span>
+<span class="nc" id="L129">                sb.append(Base64.getEncoder().encodeToString(f.getBytes()));</span>
+            }
+        }
+<span class="nc bnc" id="L132" title="All 2 branches missed.">        return sb.length() &gt; 0 ? sb.toString() : null;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

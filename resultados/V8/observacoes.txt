@@ -1,0 +1,22 @@
+V8 = I8 (Pós-adoção, UC010/RF005/RF009/RF011/RN004/RN012). 4 chamadas à API.
+
+- Tentativas 1-3: 3 erros de compilação simples em cadeia (acesso a campo
+  privado em vez de getter; variável inexistente). Todos corrigidos.
+- Tentativa 3 final compilou, 25/25 testes JUnit passaram.
+- Teste manual achou bug real (RF009): ao avaliar o mesmo adotante por
+  estrelas duas vezes (gestores diferentes), a segunda avaliação sobrescrevia
+  a primeira em vez de prevalecer a menor nota.
+- Tentativa 4 (correção): adicionou o campo usuarios.menor_estrela_avaliacao
+  com lógica de mínimo correta. Confirmado por novo teste manual (3 e 5
+  estrelas → prevalece 3). Nota: minha primeira verificação olhou o campo
+  errado (adocoes.estrelas_avaliacao, que só registra a última avaliação
+  daquela adoção específica — não é onde RF009 se aplica) e pareceu ainda
+  reprovado; reexaminando o campo correto, a regra está certa.
+
+RN012 (prazo de 5 dias) e a notificação automática após 15 dias (CT033) não
+foram implementadas com bloqueio de data real, por decisão já registrada no
+prompt deste incremento (para permitir teste manual sem esperar dias reais);
+CT033 fica Não executado.
+
+RESULTADOS: CT032, CT034, CT035, CT036 — Aprovados. CT033 — Não executado.
+Taxa de aprovação (TA) de V8: 4/4 executados = 100%.

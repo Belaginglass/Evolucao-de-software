@@ -1,0 +1,15 @@
+V0 é o esqueleto manual do projeto — não houve chamada ao Gemini nesta versão
+(ver seção 3.4/5.1 do artigo). Commit: 516a5fb9c89e81bfe800690df66ce538933e90da
+("V0 - estrutura inicial do DogTech"); ajustes de configuração subsequentes nos
+commits df0cc92 e b4362f8 (não alteram funcionalidade).
+
+Baseline praticamente nula, como esperado: 2 classes triviais (ponto de entrada +
+teste de contexto), sem lógica de negócio. Serve de referência (zero) para
+comparação com V1-V10.
+
+Taxa de aprovação (TA) oficial = Não calculável (nenhum caso de teste funcional
+CTxxx foi executado nesta versão — os dois rotulados V0, CT045 e CT046, estão
+"Não executado" por ausência de funcionalidade correspondente).
+
+Detalhe completo, incluindo a distinção N/A vs. 0 para LCOM*/TCC/LCC do CK:
+ver resultados/V0/registro_V0.md e resultados/protocolo_metricas.md.

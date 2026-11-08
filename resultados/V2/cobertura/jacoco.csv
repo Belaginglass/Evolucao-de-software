@@ -1,0 +1,9 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+geracao-iterativa,com.tcc.iterativa.service,UsuarioService,65,388,38,36,13,83,36,11,2,8
+geracao-iterativa,com.tcc.iterativa,GeracaoIterativaApplication,5,3,0,0,2,1,1,1,1,1
+geracao-iterativa,com.tcc.iterativa.model,Usuario,54,111,0,0,17,32,17,27,17,27
+geracao-iterativa,com.tcc.iterativa.controller,AuthController,211,11,14,0,53,4,17,1,10,1
+geracao-iterativa,com.tcc.iterativa.controller,UsuarioController,107,9,10,0,20,4,9,1,4,1
+geracao-iterativa,com.tcc.iterativa.config,SecurityConfig,0,62,0,0,0,8,0,5,0,5
+geracao-iterativa,com.tcc.iterativa.config,PasswordUtils,15,87,5,9,3,20,5,8,0,6
+geracao-iterativa,com.tcc.iterativa.config,CepUtils,7,101,4,6,4,22,4,3,0,2

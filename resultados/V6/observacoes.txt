@@ -1,0 +1,24 @@
+V6 = I6 (Solicitação de adoção, UC005/RF003/RF004-parte1/RN004/RN006/RN008).
+4 chamadas à API.
+
+- Tentativa 1: erro de compilação simples (getState() em vez de getEstado()).
+- Tentativa 2 (correção): corrigiu, mas revelou outro getter errado no teste
+  (getAnimal ausente).
+- Tentativa 3 (correção): corrigiu. Compilou, mas 3/20 testes JUnit falharam com
+  "Unable to find Animal with id 1" — bug no setup do próprio teste (referência
+  a um Animal não persistido antes do uso).
+- Tentativa 4 (correção): corrigiu o setup do teste. 20/20 passaram.
+
+Teste manual: ao testar o fluxo de adoção pela primeira vez, usei o nome de
+campo errado no POST (aceitaTermo em vez de termoAceito, correto) — não é bug
+da aplicação, é erro do meu próprio script de teste; refeito corretamente e
+confirmado que o pedido é persistido com estado AGUARDANDO.
+
+REGRESSÃO: home, busca de CEP e bloqueio de escalonamento de privilégio (I5)
+continuam funcionando.
+
+RESULTADOS: CT024, CT026, CT027 Aprovados. CT025 (listagem vazia) Não executado
+por falta de tempo nesta rodada — coberto por teste JUnit, mas não verificado
+manualmente em cenário real.
+
+Taxa de aprovação (TA) de V6: 3/3 executados = 100%.

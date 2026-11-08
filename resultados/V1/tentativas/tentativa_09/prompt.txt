@@ -1,0 +1,801 @@
+Você gerou o código abaixo para o incremento I1 do DogTech em uma
+chamada anterior. Ao compilar com `mvn clean package`, o seguinte erro ocorreu:
+
+===== ERRO DE COMPILAÇÃO =====
+Resultado: Falha
+
+----- stdout -----
+[ERROR] [ERROR] Some problems were encountered while processing the POMs:
+[ERROR] Malformed POM C:\Users\belag\Documents\TCC\Artigo_04_11\Projeto\pom.xml: expected START_TAG or END_TAG not TEXT (position: TEXT seen ...</goal>\r\n                        </goals>>\r\n                    </... @76:23)  @ C:\Users\belag\Documents\TCC\Artigo_04_11\Projeto\pom.xml, line 76, column 23
+ @ 
+[ERROR] The build could not read 1 project -> [Help 1]
+[ERROR]   
+[ERROR]   The project com.tcc.iterativa:geracao-iterativa:0.0.1-SNAPSHOT (C:\Users\belag\Documents\TCC\Artigo_04_11\Projeto\pom.xml) has 1 error
+[ERROR]     Malformed POM C:\Users\belag\Documents\TCC\Artigo_04_11\Projeto\pom.xml: expected START_TAG or END_TAG not TEXT (position: TEXT seen ...</goal>\r\n                        </goals>>\r\n                    </... @76:23)  @ C:\Users\belag\Documents\TCC\Artigo_04_11\Projeto\pom.xml, line 76, column 23 -> [Help 2]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/ProjectBuildingException
+[ERROR] [Help 2] http://cwiki.apache.org/confluence/display/MAVEN/ModelParseException
+
+----- stderr -----
+
+
+===== ESTADO ATUAL DO PROJETO (Projeto/, já com o erro) =====
+===== ARQUIVO: pom.xml =====
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.16</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.tcc.iterativa</groupId>
+    <artifactId>geracao-iterativa</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>geracao-iterativa</name>
+    <description>Projeto de TCC - Geracao iterativa de codigo</description>
+    <packaging>jar</packaging>
+
+    <properties>
+        <java.version>17</java.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- Hibernate nao traz dialeto para SQLite por padrao; este modulo fornece o SQLiteDialect -->
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-community-dialects</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.12</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Versao fixada (etapa 6.2): analise estatica complementar via SonarQube.
+                 Uso: mvn sonar:sonar -Dsonar.host.url=<url> -Dsonar.token=<token>
+                      -Dsonar.projectKey=dogtech -Dsonar.projectVersion=Vn -->
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>5.1.0.4751</version>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/config/package-info.java =====
+/**
+ * Classes de configuração transversais do sistema (ex.: codificação de senha —
+ * {@code RNF001} —, carregamento do {@code ceps.csv} — {@code RNF002} —, e demais
+ * beans de infraestrutura). Pacote mantido vazio no V0; as configurações concretas são
+ * adicionadas a partir dos incrementos (I1 em diante), à medida que cada requisito
+ * transversal passa a ser exercitado por uma funcionalidade.
+ */
+package com.tcc.iterativa.config;
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/config/PasswordUtils.java =====
+package com.tcc.iterativa.config;
+
+import org.springframework.stereotype.Component;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.Base64;
+
+@Component
+public class PasswordUtils {
+
+    private static final int SALT_BYTES = 1; // 8 bits = 1 byte
+
+    public String generateSalt() {
+        byte[] salt = new byte[SALT_BYTES];
+        new SecureRandom().nextBytes(salt);
+        return Base64.getEncoder().encodeToString(salt);
+    }
+
+    public String hashPassword(String password, String saltStr) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] salt = Base64.getDecoder().decode(saltStr);
+            digest.update(salt);
+            byte[] hash = digest.digest(password.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Erro ao criptografar senha", e);
+        }
+    }
+
+    public boolean validatePassword(String rawPassword, String saltStr, String storedHash) {
+        String newHash = hashPassword(rawPassword, saltStr);
+        return newHash.equals(storedHash);
+    }
+
+    public boolean validateFormat(String email, String password) {
+        if (email == null || password == null) {
+            return false;
+        }
+        // RN001: E-mail deve conter apenas letras A-Z, digitos 0-9 e exatamente um "@", sem < > " ' / \ : |
+        // Senha: min 8 caracteres, sem esses mesmos caracteres.
+        String emailRegex = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$Rs*";
+        // Ajuste simples para caracteres proibidos
+        String forbiddenChars = "[<>\"'/:|\\\\]";
+        
+        if (email.matches(".*" + forbiddenChars + ".*")) return false;
+        if (password.matches(".*" + forbiddenChars + ".*")) return false;
+        
+        long atCount = email.chars().filter(ch -> ch == '@').count();
+        if (atCount != 1) return false;
+
+        if (password.length() < 8) return false;
+
+        return true;
+    }
+}
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/config/SecurityConfig.java =====
+package com.tcc.iterativa.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/", "/login", "/cadastro", "/recuperar-senha", "/atualizar-senha", "/h2-console/**").permitAll()
+                .anyRequest().authenticated()
+            )
+            .formLogin(form -> form.disable());
+        
+        return http.build();
+    }
+}
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/controller/AuthController.java =====
+package com.tcc.iterativa.controller;
+
+import com.tcc.iterativa.model.Usuario;
+import com.tcc.iterativa.service.UsuarioService;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Optional;
+
+@Controller
+public class AuthController {
+
+    private final UsuarioService usuarioService;
+
+    public AuthController(UsuarioService usuarioService) {
+        this.usuarioService = usuarioService;
+    }
+
+    @GetMapping({"/", "/login"})
+    public String loginPage() {
+        return "auth/login";
+    }
+
+    @PostMapping("/login")
+    public String fazerLogin(@RequestParam String email, @RequestParam String senha, Model model) {
+        Optional<Usuario> usuario = usuarioService.autenticar(email, senha);
+        if (usuario.isPresent()) {
+            if ("ADMIN".equals(usuario.get().getPapel())) {
+                return "redirect:/home-admin";
+            } else {
+                return "redirect:/home-adotante";
+            }
+        }
+        model.addAttribute("erro", "E-mail ou senha incorretos.");
+        return "auth/login";
+    }
+
+    @PostMapping("/cadastro")
+    public String cadastrar(@RequestParam String email, @RequestParam String senha, @RequestParam(defaultValue = "ADOTANTE") String papel, Model model) {
+        try {
+            usuarioService.cadastrar(email, senha, papel);
+            model.addAttribute("sucesso", "Cadastro realizado com sucesso! Faça login.");
+        } catch (Exception e) {
+            model.addAttribute("erro", e.getMessage());
+        }
+        return "auth/login";
+    }
+
+    @PostMapping("/recuperar-senha")
+    public String recuperarSenha(@RequestParam String email, Model model) {
+        String token = usuarioService.gerarTokenRecuperacao(email);
+        if (token != null) {
+            model.addAttribute(
+                "sucesso",
+                "Link de recuperação enviado. Simulação de link: /atualizar-senha?token=" + token
+            );
+        } else {
+            model.addAttribute("erro", "E-mail não encontrado.");
+        }
+        return "auth/login";
+    }
+
+    @GetMapping("/atualizar-senha")
+    public String atualizarSenhaPage(@RequestParam String token, Model model) {
+        Optional<Usuario> u = usuarioService.buscarPorToken(token);
+        if (u.isPresent()) {
+            model.addAttribute("token", token);
+            return "auth/nova-senha";
+        }
+        model.addAttribute("erro", "Token inválido ou expirado.");
+        return "auth/login";
+    }
+
+    @PostMapping("/atualizar-senha")
+    public String atualizarSenha(@RequestParam String token, @RequestParam String novaSenha, Model model) {
+        boolean sucesso = usuarioService.alterarSenhaComToken(token, novaSenha);
+        if (sucesso) {
+            model.addAttribute("sucesso", "Senha alterada com sucesso! Faça login.");
+            return "auth/login";
+        }
+        model.addAttribute("token", token);
+        model.addAttribute("erro", "Falha ao alterar senha. Verifique o formato ou validade.");
+        return "auth/nova-senha";
+    }
+
+    @GetMapping("/home-admin")
+    public String homeAdmin() {
+        return "home/admin";
+    }
+
+    @GetMapping("/home-adotante")
+    public String homeAdotante() {
+        return "home/adotante";
+    }
+}
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/controller/package-info.java =====
+/**
+ * Camada de apresentação (MVC) — controladores responsáveis por receber requisições HTTP,
+ * delegar o processamento à camada de serviço e selecionar a view (Thymeleaf) de resposta.
+ * Pacote mantido vazio no V0, conforme {@code RNF003} (arquitetura MVC/SOA/DAO); os
+ * controladores concretos são adicionados a partir dos incrementos (I1 em diante).
+ */
+package com.tcc.iterativa.controller;
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/dto/package-info.java =====
+/**
+ * Objetos de transferência de dados (DTOs) entre as camadas de controle, serviço e as
+ * views Thymeleaf. Pacote mantido vazio no V0; os DTOs concretos são adicionados a
+ * partir dos incrementos (I1 em diante), conforme necessário.
+ */
+package com.tcc.iterativa.dto;
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/GeracaoIterativaApplication.java =====
+package com.tcc.iterativa;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class GeracaoIterativaApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(GeracaoIterativaApplication.class, args);
+    }
+
+}
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/model/package-info.java =====
+/**
+ * Entidades de domínio (JPA) do sistema DogTech. Pacote mantido vazio no V0; as
+ * entidades concretas (Usuario, Animal, Adocao, etc.) são adicionadas a partir dos
+ * incrementos (I1 em diante), conforme os requisitos e regras de negócio correspondentes.
+ */
+package com.tcc.iterativa.model;
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/model/Usuario.java =====
+package com.tcc.iterativa.model;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "usuarios")
+public class Usuario {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true, nullable = false)
+    private String email;
+
+    @Column(nullable = false)
+    private String senha;
+
+    @Column(nullable = false)
+    private String salt;
+
+    @Column(nullable = false)
+    private String papel; // ADMIN ou ADOTANTE
+
+    private String tokenRecuperacao;
+    private LocalDateTime validadeToken;
+
+    public Usuario() {}
+
+    public Usuario(String email, String senha, String salt, String papel) {
+        this.email = email;
+        this.senha = senha;
+        this.salt = salt;
+        this.papel = papel;
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    public String getSenha() { return senha; }
+    public void setSenha(String senha) { this.senha = senha; }
+
+    public String getSalt() { return salt; }
+    public void setSalt(String salt) { this.salt = salt; }
+
+    public String getPapel() { return papel; }
+    public void setPapel(String papel) { this.papel = papel; }
+
+    public String getTokenRecuperacao() { return tokenRecuperacao; }
+    public void setTokenRecuperacao(String tokenRecuperacao) { this.tokenRecuperacao = tokenRecuperacao; }
+
+    public LocalDateTime getValidadeToken() { return validadeToken; }
+    public void setValidadeToken(LocalDateTime validadeToken) { this.validadeToken = validadeToken; }
+}
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/repository/package-info.java =====
+/**
+ * Camada de acesso a dados (DAO), implementada com repositórios Spring Data JPA sobre
+ * o banco SQLite. Pacote mantido vazio no V0, conforme {@code RNF003}; os repositórios
+ * concretos são adicionados a partir dos incrementos (I1 em diante), conforme as
+ * entidades de {@code model} forem introduzidas.
+ */
+package com.tcc.iterativa.repository;
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/repository/UsuarioRepository.java =====
+package com.tcc.iterativa.repository;
+
+import com.tcc.iterativa.model.Usuario;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
+
+@Repository
+public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
+    Optional<Usuario> findByEmail(String email);
+    Optional<Usuario> findByTokenRecuperacao(String token);
+}
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/service/package-info.java =====
+/**
+ * Camada de serviço (SOA) — regras de negócio do sistema, orquestrando acesso aos
+ * repositórios e demais serviços. Pacote mantido vazio no V0, conforme {@code RNF003};
+ * os serviços concretos são adicionados a partir dos incrementos (I1 em diante).
+ */
+package com.tcc.iterativa.service;
+
+
+===== ARQUIVO: src/main/java/com/tcc/iterativa/service/UsuarioService.java =====
+package com.tcc.iterativa.service;
+
+import com.tcc.iterativa.config.PasswordUtils;
+import com.tcc.iterativa.model.Usuario;
+import com.tcc.iterativa.repository.UsuarioRepository;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+public class UsuarioService {
+
+    private final UsuarioRepository usuarioRepository;
+    private final PasswordUtils passwordUtils;
+
+    public UsuarioService(UsuarioRepository usuarioRepository, PasswordUtils passwordUtils) {
+        this.usuarioRepository = usuarioRepository;
+        this.passwordUtils = passwordUtils;
+    }
+
+    public Usuario cadastrar(String email, String senha, String papel) throws Exception {
+        if (!passwordUtils.validateFormat(email, senha)) {
+            throw new IllegalArgumentException("E-mail ou senha inválidos segundo as regras de formato.");
+        }
+        if (usuarioRepository.findByEmail(email).isPresent()) {
+            throw new IllegalArgumentException("E-mail já cadastrado.");
+        }
+
+        String salt = passwordUtils.generateSalt();
+        String hash = passwordUtils.hashPassword(senha, salt);
+
+        Usuario usuario = new Usuario(email, hash, salt, papel);
+        return usuarioRepository.save(usuario);
+    }
+
+    public Optional<Usuario> autenticar(String email, String senha) {
+        Optional<Usuario> opt = usuarioRepository.findByEmail(email);
+        if (opt.isPresent()) {
+            Usuario u = opt.get();
+            if (passwordUtils.validatePassword(senha, u.getSalt(), u.getSenha())) {
+                return Optional.of(u);
+            }
+        }
+        return Optional.empty();
+    }
+
+    public String gerarTokenRecuperacao(String email) {
+        Optional<Usuario> opt = usuarioRepository.findByEmail(email);
+        if (opt.isPresent()) {
+            Usuario u = opt.get();
+            String token = UUID.randomUUID().toString().replace("-", ""); // 32 caracteres
+            u.getTokenRecuperacao();
+            u.setTokenRecuperacao(token);
+            u.setValidadeToken(LocalDateTime.now().plusHours(24));
+            usuarioRepository.save(u);
+            return token;
+        }
+        return null;
+    }
+
+    public boolean alterarSenhaComToken(String token, String novaSenha) {
+        Optional<Usuario> opt = usuarioRepository.findByTokenRecuperacao(token);
+        if (opt.isPresent()) {
+            Usuario u = opt.get();
+            if (u.getValidadeToken() != null && u.getValidadeToken().isAfter(LocalDateTime.now())) {
+                if (!passwordUtils.validateFormat(u.getEmail(), novaSenha)) {
+                    return false;
+                }
+                String salt = passwordUtils.generateSalt();
+                u.setSenha(passwordUtils.hashPassword(novaSenha, salt));
+                u.setSalt(salt);
+                u.setTokenRecuperacao(null);
+                u.setValidadeToken(null);
+                usuarioRepository.save(u);
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    public Optional<Usuario> buscarPorToken(String token) {
+        Optional<Usuario> opt = usuarioRepository.findByTokenRecuperacao(token);
+        if (opt.isPresent() && opt.get().getValidadeToken() != null && opt.get().getValidadeToken().isAfter(LocalDateTime.now())) {
+            return opt;
+        }
+        return Optional.empty();
+    }
+}
+
+
+===== ARQUIVO: src/main/resources/application.properties =====
+spring.application.name=geracao-iterativa
+
+spring.datasource.url=jdbc:sqlite:data/geracao-iterativa.db
+spring.datasource.driver-class-name=org.sqlite.JDBC
+
+spring.jpa.database-platform=org.hibernate.community.dialect.SQLiteDialect
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+
+
+===== ARQUIVO: src/main/resources/ceps.csv =====
+cep,rua,bairro,cidade,estado
+36050000,Rua Américo Lobo,Bairu,Juiz de Fora,MG
+36050010,Rua Professor Teodoro Coelho,Bairu,Juiz de Fora,MG
+36050100,Praça Olavo Costa,Bairu,Juiz de Fora,MG
+36050190,Rua José Ribeiro,Bairu,Juiz de Fora,MG
+36080280,Rua Edgard de Paiva Aguiar,Cerâmica,Juiz de Fora,MG
+36080300,Rua Martinho Gonçalves,Cerâmica,Juiz de Fora,MG
+36080350,Avenida Olavo Bilac,Cerâmica,Juiz de Fora,MG
+36080410,Rua Nicolau Capelli,Cerâmica,Juiz de Fora,MG
+36045130,Rua Vitório Saggioro,Centenário,Juiz de Fora,MG
+36045150,Rua Alves Júnior,Centenário,Juiz de Fora,MG
+36045230,Rua João Lourenço,Centenário,Juiz de Fora,MG
+36045300,Rua Oscar Ribeiro,Centenário,Juiz de Fora,MG
+36072010,Rua Coronel Assis,Floresta,Juiz de Fora,MG
+36072050,Avenida Paulista,Floresta,Juiz de Fora,MG
+36072100,Rua das Laranjeiras,Floresta,Juiz de Fora,MG
+36072120,Rua Ipê,Floresta,Juiz de Fora,MG
+36050240,Rua Arthur Ângelo Petrato,Progresso,Juiz de Fora,MG
+36050280,Rua Humberto Valério,Progresso,Juiz de Fora,MG
+36050420,Rua Carlos Drummond de Andrade,Progresso,Juiz de Fora,MG
+36050450,Rua Geraldo Marques de Oliveira,Progresso,Juiz de Fora,MG
+36091000,Avenida Pedro Timponi,Nova Benfica,Juiz de Fora,MG
+36091030,Rua José Ribeiro de Mattos,Nova Benfica,Juiz de Fora,MG
+36091100,Rua Abel Rafael Pinto,Nova Benfica,Juiz de Fora,MG
+36091160,Rua Antônio Gatas Bara,Nova Benfica,Juiz de Fora,MG
+
+
+===== ARQUIVO: src/main/resources/templates/auth/login.html =====
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>DogTech - Autenticação</title>
+</head>
+<body>
+    <h2>DogTech - Autenticação (UC001)</h2>
+
+    <div th:if="${erro}" style="color: red;">
+        <p th:text="${erro}"></p>
+    </div>
+    <div th:if="${sucesso}" style="color: green;">
+        <p th:text="${sucesso}"></p>
+    </div>
+
+    <h3>Entrar</h3>
+    <form action="/login" method="post">
+        <label>E-mail: <span title="Insira apenas letras, números e um @, sem caracteres especiais proibidos">?</span></label>
+        <input type="text" name="email" required><br><br>
+        <label>Senha: <span title="Mínimo de 8 caracteres, sem caracteres especiais proibidos">?</span></label>
+        <input type="password" name="senha" required><br><br>
+        <button type="submit">Entrar</button>
+    </form>
+
+    <hr>
+
+    <h3>Cadastrar (Adotante / Admin)</h3>
+    <form action="/cadastro" method="post">
+        <label>E-mail:</label>
+        <input type="text" name="email" required><br><br>
+        <label>Senha:</label>
+        <input type="password" name="senha" required><br><br>
+        <label>Tipo:</label>
+        <select name="papel">
+            <option value="ADOTANTE">Adotante</option>
+            <option value="ADMIN">Administrador</option>
+        </select><br><br>
+        <button type="submit">Cadastrar</button>
+    </form>
+
+    <hr>
+
+    <h3>Esqueceu sua senha?</h3>
+    <form action="/recuperar-senha" method="post">
+        <label>E-mail:</label>
+        <input type="text" name="email" required><br><br>
+        <button type="submit">Recuperar</button>
+    </form>
+</body>
+</html>
+
+
+===== ARQUIVO: src/main/resources/templates/auth/nova-senha.html =====
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>DogTech - Nova Senha</title>
+</head>
+<body>
+    <h2>DogTech - Inserir Nova Senha</h2>
+    <div th:if="${erro}" style="color: red;">
+        <p th:text="${erro}"></p>
+    </div>
+    <form action="/atualizar-senha" method="post">
+        <input type="hidden" name="token" th:value="${token}">
+        <label>Nova Senha:</label>
+        <input type="password" name="novaSenha" required><br><br>
+        <button type="submit">Enviar</button>
+    </form>
+</body>
+</html>
+
+
+===== ARQUIVO: src/main/resources/templates/home/admin.html =====
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>Home Admin</title></head>
+<body>
+    <h1>Bem-vindo à Tela Inicial Administrativa [PRT-2]</h1>
+    <a href="/login">Sair</a>
+</body>
+</html>
+
+
+===== ARQUIVO: src/main/resources/templates/home/adotante.html =====
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>Home Adotante</title></head>
+<body>
+    <h1>Bem-vindo à Tela Inicial do Adotante [PRT-3]</h1>
+    <a href="/login">Sair</a>
+</body>
+</html>
+
+
+===== ARQUIVO: src/test/java/com/tcc/iterativa/GeracaoIterativaApplicationTests.java =====
+package com.tcc.iterativa;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class GeracaoIterativaApplicationTests {
+
+    @Test
+    void contextLoads() {
+    }
+
+}
+
+
+===== ARQUIVO: src/test/java/com/tcc/iterativa/service/UsuarioServiceTest.java =====
+package com.tcc.iterativa.service;
+
+import com.tcc.iterativa.config.PasswordUtils;
+import com.tcc.iterativa.model.Usuario;
+import com.tcc.iterativa.repository.UsuarioRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+@SpringBootTest
+class UsuarioServiceTest {
+
+    @Autowired
+    private UsuarioService usuarioService;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @BeforeEach
+    void setUp() {
+        usuarioRepository.deleteAll();
+    }
+
+    @Test
+    void testCadastroESucessoAutenticacao() throws Exception {
+        usuarioService.cadastrar("teste@dogtech.com", "senha1234", "ADOTANTE");
+        Optional<Usuario> user = usuarioService.autenticar("teste@dogtech.com", "senha1234");
+        assertTrue(user.isPresent());
+    }
+
+    @Test
+    void testCadastroFalhaFormatoEmail() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            usuarioService.cadastrar("emailerrado.com", "senha1234", "ADOTANTE");
+        });
+    }
+
+    @Test
+    void testRecuperacaoSenha() throws Exception {
+        usuarioService.cadastrar("recupera@dogtech.com", "senha1234", "ADOTANTE");
+        String token = usuarioService.gerarTokenRecuperacao("recupera@dogtech.com");
+        assertNotNull(token);
+
+        boolean alterado = usuarioService.alterarSenhaComToken(token, "novasenha123");
+        assertTrue(alterado);
+
+        Optional<Usuario> user = usuarioService.autenticar("recupera@dogtech.com", "novasenha123");
+        assertTrue(user.isPresent());
+    }
+}
+
+
+
+Corrija APENAS o necessário para o projeto compilar. Não altere comportamento,
+não adicione funcionalidades novas, não modifique arquivos que não precisam de
+correção para este erro específico.
+
+RESTRIÇÕES E CRITÉRIOS DE CONCLUSÃO DA RESPOSTA
+- Responda com um ÚNICO bloco de código ```json contendo exatamente este formato,
+  e nada além disso dentro do bloco:
+  {
+    "arquivos": [
+      {"caminho": "src/main/java/com/tcc/iterativa/.../Foo.java",
+       "acao": "criar" | "modificar" | "remover",
+       "conteudo": "<conteúdo TEXTUAL COMPLETO do arquivo, já com o resultado final;"
+                   " omitido/vazio quando acao=remover>"}
+    ]
+  }
+- "caminho" é relativo à raiz do projeto Spring Boot (Projeto/), com barras "/",
+  nunca ".." nem caminho absoluto. Deve começar LITERALMENTE com "src/" (incluindo
+  "src/main/java/" para código Java — nunca omita esse prefixo) ou ser exatamente
+  "pom.xml" — não modifique nenhum outro arquivo.
+  Exemplo de "caminho" CORRETO para uma classe nova no pacote config (string única,
+  sem quebra de linha): "src/main/java/com/tcc/iterativa/config/Exemplo.java"
+  Exemplo INCORRETO (NÃO faça isso — falta o prefixo "src/main/java/"):
+  "com/tcc/iterativa/config/Exemplo.java"
+- "conteudo" é o arquivo INTEIRO já modificado (não um diff, não um trecho) — para
+  "modificar", repita também as partes que não mudaram.
+- Não gere um unified diff. Não inclua texto explicativo dentro do bloco ```json```.
+  Qualquer observação, suposição ou lista de requisitos atendidos deve vir DEPOIS do
+  bloco, em texto normal.
+- Ao final, fora do bloco de código, liste: (a) arquivos criados/modificados/
+  removidos; (b) os identificadores de requisitos atendidos (RF/RNF/RN); (c)
+  suposições feitas.
+

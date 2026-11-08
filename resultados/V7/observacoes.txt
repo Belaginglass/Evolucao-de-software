@@ -1,0 +1,25 @@
+V7 = I7 (Avaliação e aprovação de adoções, UC006/RF004-parte2/RN007/RN014/
+RN015/RN016). 1 chamada à API — aplicou de primeira, compilou, 23/23 testes
+JUnit passaram.
+
+Teste manual: 3 das minhas próprias chamadas HTTP usaram nomes de parâmetro
+errados por suposição (ex.: "horarios" em vez de "disponibilidade", e
+"animalId" ausente no cadastro manual) — não são bugs da aplicação, corrigidos
+no próprio teste e revalidados com sucesso.
+
+RN007 (gestor não aprova a própria adoção) está corretamente implementada em
+dois pontos: a fila de pedidos omite o pedido do próprio gestor, e uma
+tentativa direta de aprovar o próprio pedido (contornando a listagem) também é
+bloqueada com erro explícito — ou seja, a regra não depende só da UI, está no
+service.
+
+RN014 confirmada: senha gerada automaticamente no cadastro manual é a data de
+nascimento em formato ddMMyyyy (sem separadores); login com essa senha
+funciona.
+
+REGRESSÃO: não testada exaustivamente nesta rodada por tempo, mas os fluxos de
+I1 (login) e I6 (listagem/solicitação de adoção) foram usados como parte do
+próprio teste de I7 e continuaram funcionando normalmente.
+
+RESULTADOS: CT028, CT029, CT030, CT031 — todos Aprovados.
+Taxa de aprovação (TA) de V7: 4/4 = 100%.

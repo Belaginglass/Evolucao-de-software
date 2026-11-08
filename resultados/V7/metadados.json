@@ -1,0 +1,67 @@
+{
+  "id_execucao": "I7-t01-2bd41d7f",
+  "incremento": "I7",
+  "versao_anterior": "V6",
+  "versao_resultante": "V7",
+  "tentativa": 1,
+  "tipo": "geracao",
+  "modelo": "gemini-3.5-flash-lite",
+  "parametros": {
+    "temperature": 0.0,
+    "top_p": null,
+    "top_k": null,
+    "nota_parametros": "top_p/top_k não fixados explicitamente: com temperature=0 a amostragem é determinística (greedy), tornando-os irrelevantes para o resultado; não estimados nem inventados."
+  },
+  "formato_resposta": "json (caminho+conteúdo completo) — não unified diff (ver docstring do script para o motivo da mudança)",
+  "data_hora_inicio": "2026-11-06T03:01:02.210032+00:00",
+  "commit_base": "456d1fed986dc4889ca22bfec46e7f32e6367ce1",
+  "data_hora_fim": "2026-11-06T03:01:26.231601+00:00",
+  "tempo_resposta_segundos": 24.015,
+  "sucesso_chamada": true,
+  "finish_reason": "STOP",
+  "tokens_entrada": 42444,
+  "tokens_saida": 10518,
+  "tokens_total": 52962,
+  "erros": [],
+  "json_extraido": true,
+  "arquivos_na_resposta": [
+    {
+      "caminho": "src/main/java/com/tcc/iterativa/config/SecurityConfig.java",
+      "acao": "modificar"
+    },
+    {
+      "caminho": "src/main/java/com/tcc/iterativa/controller/AdocaoController.java",
+      "acao": "modificar"
+    },
+    {
+      "caminho": "src/main/java/com/tcc/iterativa/model/Usuario.java",
+      "acao": "modificar"
+    },
+    {
+      "caminho": "src/main/java/com/tcc/iterativa/service/AdocaoService.java",
+      "acao": "modificar"
+    },
+    {
+      "caminho": "src/main/resources/templates/adocao/cadastro-manual.html",
+      "acao": "criar"
+    },
+    {
+      "caminho": "src/main/resources/templates/adocao/fila.html",
+      "acao": "modificar"
+    },
+    {
+      "caminho": "src/test/java/com/tcc/iterativa/service/AdocaoServiceI7Test.java",
+      "acao": "criar"
+    }
+  ],
+  "alteracoes_aplicadas": true,
+  "arquivos_alterados": [
+    "Modificado\tsrc/main/java/com/tcc/iterativa/config/SecurityConfig.java",
+    "Modificado\tsrc/main/java/com/tcc/iterativa/controller/AdocaoController.java",
+    "Modificado\tsrc/main/java/com/tcc/iterativa/model/Usuario.java",
+    "Modificado\tsrc/main/java/com/tcc/iterativa/service/AdocaoService.java",
+    "Criado\tsrc/main/resources/templates/adocao/cadastro-manual.html",
+    "Modificado\tsrc/main/resources/templates/adocao/fila.html",
+    "Criado\tsrc/test/java/com/tcc/iterativa/service/AdocaoServiceI7Test.java"
+  ]
+}

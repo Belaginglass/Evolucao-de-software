@@ -1,0 +1,322 @@
+Versão,Compilação,Observação
+V0,Sucesso,"V0 é o esqueleto manual do projeto — não houve chamada ao Gemini nesta versão
+(ver seção 3.4/5.1 do artigo). Commit: 516a5fb9c89e81bfe800690df66ce538933e90da
+(""V0 - estrutura inicial do DogTech""); ajustes de configuração subsequentes nos
+commits df0cc92 e b4362f8 (não alteram funcionalidade).
+
+Baseline praticamente nula, como esperado: 2 classes triviais (ponto de entrada +
+teste de contexto), sem lógica de negócio. Serve de referência (zero) para
+comparação com V1-V10.
+
+Taxa de aprovação (TA) oficial = Não calculável (nenhum caso de teste funcional
+CTxxx foi executado nesta versão — os dois rotulados V0, CT045 e CT046, estão
+""Não executado"" por ausência de funcionalidade correspondente).
+
+Detalhe completo, incluindo a distinção N/A vs. 0 para LCOM*/TCC/LCC do CK:
+ver resultados/V0/registro_V0.md e resultados/protocolo_metricas.md."
+V1,Sucesso,"V1 = I1 (Autenticação e controle inicial de acesso, UC001/RF001/RN001/RN005).
+
+RESUMO DO PROCESSO DE GERAÇÃO (ver resultados/log_dificuldades_geracao.md para o
+detalhe completo de cada tentativa):
+- Tentativas 1-2: formato unified diff (decisão original da etapa 8.1) falhou nas
+  duas vezes por erro de contagem de linhas no cabeçalho do hunk, gerado pelo
+  próprio modelo. Decisão (autorizada pelo pesquisador): trocar para JSON
+  (caminho+conteúdo completo).
+- Tentativas 3-4: formato JSON, mas caminho de arquivo sem o prefixo ""src/main/java/""
+  (ex.: ""com/tcc/iterativa/config/SenhaConfig.java""). Corrigido o prompt (exemplo
+  explícito de caminho correto/incorreto).
+- Tentativa 5: aplicada com sucesso (11 arquivos criados). Bug no próprio script
+  (gerar_codigo.py) encontrado e corrigido: `git diff` não mostra arquivos
+  untracked, então o relatório de ""arquivos alterados"" aparecia vazio mesmo com os
+  arquivos escritos corretamente — corrigido com `git add -A` antes do diff.
+- Avaliação: FALHA de compilação — `UsuarioService.java:63` com parâmetro sem tipo
+  declarado (`novaSenha` em vez de `String novaSenha`). Erro genuíno do modelo.
+- Tentativa 6 (correção): corrigiu o parâmetro, mas introduziu um novo problema —
+  `SecurityConfig.java` usa Spring Security sem a dependência correspondente no
+  `pom.xml`.
+- Tentativa 7 (correção): resposta com JSON inválido (caractere de controle não
+  escapado — quebra de linha literal dentro de uma string). Corrigido o parser
+  (`json.loads(..., strict=False)`), não o conteúdo da resposta.
+- Tentativa 8 (correção, após o fix do parser): adicionou a dependência
+  `spring-boot-starter-security` ao `pom.xml`, mas introduziu um erro de sintaxe XML
+  ao reescrever o arquivo inteiro (`</goals>>` com `>` duplicado).
+- Tentativa 9 (correção): corrigiu o XML. Compilação e os 4 testes JUnit passaram.
+- Avaliação funcional manual (HTTP, via curl): encontrado um BUG FUNCIONAL real não
+  capturado pelos testes JUnit do próprio Gemini — o login autentica e redireciona
+  (302) corretamente, mas a página de destino (/home-admin, /home-adotante) retornava
+  HTTP 403, porque o Spring Security exige autenticação nessas rotas
+  (`.anyRequest().authenticated()`), e o login customizado nunca estabelecia uma
+  sessão autenticada no SecurityContext.
+- Tentativa 10: falha de infraestrutura (503 Service Unavailable da própria API do
+  Gemini, transitório) — registrada, sem relação com o conteúdo gerado.
+- Tentativa 11 (correção): corrigiu o problema de sessão (usa
+  SecurityContextHolder/SecurityContextRepository). Confirmado via novo teste manual
+  HTTP: login agora resulta em sessão autenticada (cookie JSESSIONID) e acesso
+  correto à página de destino (HTTP 200).
+
+Total: 11 chamadas à API para fechar V1 (todas preservadas em
+resultados/V1/tentativas/tentativa_01 a tentativa_11), sendo 2 com o formato
+descartado (diff), 2 com erro de caminho, 1 aplicação bem-sucedida inicial, 4
+correções de bugs reais de código, 1 falha de infraestrutura e 1 correção final.
+
+RESULTADOS DOS CASOS DE TESTE FUNCIONAIS (ver aba ""Execuções por Versão"" de
+testes/casos_teste.xlsx para o detalhe):
+- CT001 (RF001, login válido): Aprovado (após a correção da tentativa 11).
+- CT002 (RF001, login inválido): Aprovado.
+- CT003 (RN001, validação de formato): Aprovado.
+- CT004 (RN005, recuperação de senha): Aprovado.
+- CT005 (RN005, token expirado): Não executado (requer simular passagem de 24h).
+- CT045 (RNF001, criptografia): Aprovado — SHA-256 + salt de 8 bits confirmado por
+  leitura de código.
+- CT046 (RNF008, campo de ajuda): Aprovado — ícones ""?"" com atributo title na tela
+  de login.
+
+Taxa de aprovação (TA) oficial de V1: 6 aprovados / 6 executados = 100% (CT005 não
+entra no denominador, por não ter sido executado).
+
+OBSERVAÇÃO MENOR (não corrigida, não bloqueia nada): PasswordUtils.validateFormat
+declara uma variável `emailRegex` (que implementaria a regra ""apenas letras/números/@""
+da RN001 de forma mais estrita) mas nunca a utiliza — a validação real checa apenas
+caracteres proibidos + exatamente um ""@"" + senha ≥ 8 caracteres, um pouco mais
+permissiva do que o texto literal da RN001 (aceitaria, por exemplo, um e-mail com ""!""
+na parte local). Como nenhum dos CTs definidos exercita especificamente esse caso
+extremo, isso não gerou uma reprovação, mas fica registrado para referência futura."
+V2,Sucesso,"V2 = I2 (Cadastro e manutenção de usuários, UC002/UC011/RF010/RN002/RN011/RNF002).
+
+RESUMO DO PROCESSO DE GERAÇÃO (ver resultados/log_dificuldades_geracao.md para o
+detalhe completo):
+- Tentativa 1: JSON inválido — aspas duplas literais dentro de um literal Java
+  (ex.: @Table(name = ""telefones"")) não escapadas como \"" no valor da string JSON.
+  Corrigido reforçando a instrução de escaping no prompt (não o conteúdo gerado).
+- Tentativa 2: aplicada com sucesso (11 arquivos, estendendo o código de I1 em vez
+  de recriá-lo, como pedido).
+- Avaliação: FALHA de compilação — teste novo sem `import java.util.Optional`.
+- Tentativa 3 (correção): corrigiu o import, mas revelou uma FALHA DE AMBIENTE (não
+  do código gerado): o Hibernate (ddl-auto=update) tentou ALTER TABLE para adicionar
+  uma coluna UNIQUE (provavelmente ""cpf"") no banco .db deixado por V1/V0, e o SQLite
+  não aceita ALTER TABLE ADD COLUMN UNIQUE. Corrigido no PIPELINE
+  (scripts/avaliar_projeto.py agora reseta o banco antes de cada avaliação — cada
+  versão parte de esquema limpo), não no código do Gemini.
+- (Durante a investigação, dois processos Java órfãos de um teste anterior ficaram
+  travados segurando o arquivo do banco; o sandbox bloqueou o taskkill automático e
+  o pesquisador autorizou manualmente.)
+- Após o reset do banco, novo erro real: ""Ambiguous mapping"" — GET /meus-dados
+  mapeado simultaneamente em UsuarioController e AuthController.
+- Tentativa 4 (correção): removeu a duplicata, mantendo a rota em UsuarioController.
+  Novo erro: SQLite JDBC não implementa ResultSet.getBlob() — o campo de foto
+  estava mapeado como @Lob/byte[] (BLOB).
+- Tentativa 5 (correção): trocou o campo de foto para String (Base64) em coluna
+  TEXT comum. Compilação e os 8 testes JUnit passaram.
+- Teste manual (HTTP): GET /buscar-cep retornava HTTP 403 — rota não incluída na
+  lista de endpoints públicos do SecurityConfig, mas usada durante o cadastro
+  (antes de autenticar). Não capturado por nenhum teste JUnit do Gemini.
+- Tentativa 6 (correção): adicionou ""/buscar-cep"" à lista de rotas públicas.
+  Confirmado por novo teste manual: HTTP 200 com o endereço correto.
+
+Total: 6 chamadas à API para fechar V2 (preservadas em
+resultados/V2/tentativas/tentativa_01 a tentativa_06).
+
+REGRESSÃO (I1, re-testado após I2): CT001, CT002, CT003, CT004 continuam Aprovados
+— nenhuma regressão introduzida pelas mudanças de I2.
+
+RESULTADOS DOS CASOS DE TESTE FUNCIONAIS DE I2:
+- CT006 (RN002, cadastro completo): Aprovado.
+- CT007 (RN002, e-mail/CPF duplicado): Aprovado.
+- CT008 (RN002, sem telefone): Aprovado.
+- CT009 (RNF002, busca de CEP local): Aprovado (após a correção da tentativa 6).
+- CT010 (RF010/UC011, atualizar dados pessoais): Aprovado.
+- CT011 (RN011, link de confirmação/reversão): REPROVADO — o sistema salva a data
+  da alteração e gera um token/link (parcialmente conforme a regra), mas o link
+  apenas redefine a senha (reaproveita o mecanismo de UC001); não existe, nesta
+  versão, nenhuma reversão real das alterações nem histórico de atividades para
+  desfazer, como a RN011 descreve literalmente. Decisão: não solicitar uma nova
+  chamada de correção para isto agora — implementar um mecanismo de auditoria/
+  reversão de atividades estaria fora do escopo direto deste incremento (UC011
+  não detalha esse mecanismo); fica registrado como gap para uma decisão futura
+  do pesquisador (ex.: endereçar em um incremento futuro, ou aceitar como
+  limitação conhecida do experimento).
+
+Taxa de aprovação (TA) de V2 (CTs de V2 apenas): 5 aprovados / 6 executados = 83,3%.
+TA cumulativa (I1+I2, todas as execuções registradas para V2): ver aba ""Suíte
+Acumulativa"" de testes/casos_teste.xlsx."
+V3,Sucesso,"V3 = I3 (Cadastro e gerenciamento de animais, UC003/RF002/RF008/RF014/RN003/RNF004/RNF006).
+
+RESUMO: 3 chamadas à API.
+- Tentativa 1: aplicou de primeira, compilou, 11/11 testes JUnit passaram.
+- Teste manual (HTTP): ADOTANTE conseguia cadastrar animal (RF002 exige restrição
+  a Gestor/Diretor). Não capturado por nenhum teste do Gemini.
+- Tentativa 2 (correção): restringiu /animais/** a ROLE_ADMIN.
+- Teste manual: RF008 (Manter baias) nunca tinha sido implementado como entidade
+  própria — ""baia"" era só um campo de texto livre no Animal, sem CRUD, sem
+  validação de nome obrigatório.
+- Tentativa 3 (correção): implementou Baia como entidade própria (id, nome
+  obrigatório, identificador opcional) com repository e controller.
+
+REGRESSÃO: login (I1) e busca de CEP (I2) continuam funcionando.
+
+RESULTADOS DOS CASOS DE TESTE:
+- CT012, CT013, CT015, CT016, CT017, CT018: Aprovado.
+- CT014: REPROVADO — campo obrigatório ausente retorna erro genérico do Spring
+  (HTTP 400, JSON técnico), não uma mensagem amigável indicando o campo pendente.
+  Gap de UX de validação, não de corretude ou segurança; não corrigido nesta
+  versão para manter o ritmo dos incrementos restantes (política adotada a partir
+  de V3: bugs de corretude/segurança são corrigidos via nova chamada; gaps de
+  profundidade/UX são documentados como achado).
+- CT018 tem uma ressalva menor: a miniatura da foto da raça ao selecionar não foi
+  implementada (só a lista de nomes muda por espécie).
+
+Taxa de aprovação (TA) de V3 (CTs de V3): 6 aprovados / 7 executados = 85,7%."
+V4,Sucesso,"V4 = I4 (Página inicial, UC009/RN010). 1 chamada à API — aplicou de primeira,
+compilou, 14/14 testes JUnit passaram. Diferente de I3, a restrição de papel
+ADMIN para as rotas de edição (/home/sobre-nos, /home/servicos, /home/campanhas,
+/home/doacoes) já veio correta na primeira tentativa (o prompt deste incremento
+citava explicitamente a lição aprendida em I3).
+
+CT019 (editar sobre nós) e CT020 (seleção aleatória, RN010) confirmados por
+teste manual HTTP — 3 cargas da home com 5 serviços cadastrados retornaram
+subconjuntos diferentes a cada vez. Sem regressão em I1-I3.
+
+Taxa de aprovação (TA) de V4: 2/2 = 100%."
+V5,Sucesso,"V5 = I5 (Gerenciamento de privilégios dos atores, UC004/RF006). 4 chamadas à API.
+
+- Tentativa 1: aplicou de primeira, mas 2 testes JUnit falharam (CPF duplicado
+  hardcoded dentro do próprio teste — bug no teste, não na aplicação).
+- Tentativa 2 (correção): CPFs distintos nos testes. 17/17 passaram.
+- Teste manual: REGRESSÃO GRAVE — o modelo substituiu o papel simplificado
+  ""ADMIN"" por ""DIRETOR_GERAL""/""GESTOR_ADOCAO"" (como instruído), mas esqueceu de
+  atualizar o formulário público de cadastro, que ainda só oferecia
+  ""ADOTANTE""/""ADMIN"". Resultado: ninguém conseguia mais acessar as
+  funcionalidades administrativas de I3 (cadastro de animal) e I4 (página
+  inicial) com um cadastro novo, e UC004 (este próprio incremento) ficava
+  inalcançável — não havia como criar um DIRETOR_GERAL.
+- Tentativa 3 (correção): formulário atualizado com as opções corretas.
+- Teste manual: VULNERABILIDADE CRÍTICA DE SEGURANÇA — POST /usuarios/privilegios
+  e POST /usuarios/excluir não tinham NENHUMA restrição de papel (só exigiam
+  estar autenticado). Confirmado escalonamento de privilégio real: um usuário
+  ADOTANTE conseguiu se autopromover a DIRETOR_GERAL enviando uma única
+  requisição HTTP direta, sem passar por nenhuma validação de autorização.
+- Tentativa 4 (correção): restringiu as duas rotas a hasRole('DIRETOR_GERAL') no
+  SecurityConfig, e pediu defesa em profundidade (checagem também no
+  controller). Confirmado por novo teste manual: a tentativa de autopromoção
+  agora retorna 403; o fluxo legítimo (DIRETOR_GERAL promove um ADOTANTE a
+  GESTOR_ADOCAO, filtra por cargo, revoga acesso) funciona corretamente.
+
+REGRESSÃO (I1-I4, re-testada após a correção final): login, busca de CEP e
+cadastro de animal por GESTOR_ADOCAO continuam funcionando.
+
+RESULTADOS: CT021, CT022, CT023 — todos Aprovados (após as correções).
+Taxa de aprovação (TA) de V5: 3/3 = 100% (mas só depois de corrigir uma falha de
+segurança real que, se não verificada manualmente, teria passado para a versão
+""aprovada"" do sistema sem nenhum teste JUnit do próprio Gemini detectando-a)."
+V6,Sucesso,"V6 = I6 (Solicitação de adoção, UC005/RF003/RF004-parte1/RN004/RN006/RN008).
+4 chamadas à API.
+
+- Tentativa 1: erro de compilação simples (getState() em vez de getEstado()).
+- Tentativa 2 (correção): corrigiu, mas revelou outro getter errado no teste
+  (getAnimal ausente).
+- Tentativa 3 (correção): corrigiu. Compilou, mas 3/20 testes JUnit falharam com
+  ""Unable to find Animal with id 1"" — bug no setup do próprio teste (referência
+  a um Animal não persistido antes do uso).
+- Tentativa 4 (correção): corrigiu o setup do teste. 20/20 passaram.
+
+Teste manual: ao testar o fluxo de adoção pela primeira vez, usei o nome de
+campo errado no POST (aceitaTermo em vez de termoAceito, correto) — não é bug
+da aplicação, é erro do meu próprio script de teste; refeito corretamente e
+confirmado que o pedido é persistido com estado AGUARDANDO.
+
+REGRESSÃO: home, busca de CEP e bloqueio de escalonamento de privilégio (I5)
+continuam funcionando.
+
+RESULTADOS: CT024, CT026, CT027 Aprovados. CT025 (listagem vazia) Não executado
+por falta de tempo nesta rodada — coberto por teste JUnit, mas não verificado
+manualmente em cenário real.
+
+Taxa de aprovação (TA) de V6: 3/3 executados = 100%."
+V7,Sucesso,"V7 = I7 (Avaliação e aprovação de adoções, UC006/RF004-parte2/RN007/RN014/
+RN015/RN016). 1 chamada à API — aplicou de primeira, compilou, 23/23 testes
+JUnit passaram.
+
+Teste manual: 3 das minhas próprias chamadas HTTP usaram nomes de parâmetro
+errados por suposição (ex.: ""horarios"" em vez de ""disponibilidade"", e
+""animalId"" ausente no cadastro manual) — não são bugs da aplicação, corrigidos
+no próprio teste e revalidados com sucesso.
+
+RN007 (gestor não aprova a própria adoção) está corretamente implementada em
+dois pontos: a fila de pedidos omite o pedido do próprio gestor, e uma
+tentativa direta de aprovar o próprio pedido (contornando a listagem) também é
+bloqueada com erro explícito — ou seja, a regra não depende só da UI, está no
+service.
+
+RN014 confirmada: senha gerada automaticamente no cadastro manual é a data de
+nascimento em formato ddMMyyyy (sem separadores); login com essa senha
+funciona.
+
+REGRESSÃO: não testada exaustivamente nesta rodada por tempo, mas os fluxos de
+I1 (login) e I6 (listagem/solicitação de adoção) foram usados como parte do
+próprio teste de I7 e continuaram funcionando normalmente.
+
+RESULTADOS: CT028, CT029, CT030, CT031 — todos Aprovados.
+Taxa de aprovação (TA) de V7: 4/4 = 100%."
+V8,Sucesso,"V8 = I8 (Pós-adoção, UC010/RF005/RF009/RF011/RN004/RN012). 4 chamadas à API.
+
+- Tentativas 1-3: 3 erros de compilação simples em cadeia (acesso a campo
+  privado em vez de getter; variável inexistente). Todos corrigidos.
+- Tentativa 3 final compilou, 25/25 testes JUnit passaram.
+- Teste manual achou bug real (RF009): ao avaliar o mesmo adotante por
+  estrelas duas vezes (gestores diferentes), a segunda avaliação sobrescrevia
+  a primeira em vez de prevalecer a menor nota.
+- Tentativa 4 (correção): adicionou o campo usuarios.menor_estrela_avaliacao
+  com lógica de mínimo correta. Confirmado por novo teste manual (3 e 5
+  estrelas → prevalece 3). Nota: minha primeira verificação olhou o campo
+  errado (adocoes.estrelas_avaliacao, que só registra a última avaliação
+  daquela adoção específica — não é onde RF009 se aplica) e pareceu ainda
+  reprovado; reexaminando o campo correto, a regra está certa.
+
+RN012 (prazo de 5 dias) e a notificação automática após 15 dias (CT033) não
+foram implementadas com bloqueio de data real, por decisão já registrada no
+prompt deste incremento (para permitir teste manual sem esperar dias reais);
+CT033 fica Não executado.
+
+RESULTADOS: CT032, CT034, CT035, CT036 — Aprovados. CT033 — Não executado.
+Taxa de aprovação (TA) de V8: 4/4 executados = 100%."
+V9,Sucesso,"V9 = I9 (Apadrinhamento de animais e causas, UC007/UC008/RF012). 1 chamada à
+API — aplicou de primeira, compilou, 27/27 testes JUnit passaram.
+
+Teste manual: CT038 (apadrinhamento de animal/serviço, com criação de agenda —
+RN009) e CT039 (boleto sem autenticação) confirmados corretos.
+
+CT037 (apadrinhamento de causa) reprovado: o redirect funciona, mas para uma
+URL hardcoded no controller, não um link de fato cadastrado/configurável pelo
+Diretor Geral, como RF012 implica. Decisão: não corrigir nesta rodada — é uma
+funcionalidade secundária (um único link informativo) e o tempo restante foi
+priorizado para fechar os 10 incrementos e a análise final.
+
+Taxa de aprovação (TA) de V9: 2/3 = 66,7%."
+V10,Sucesso,"V10 = I10 (Eventos, doações e relatórios, UC012/UC013/UC014/RF013). Último
+incremento. 3 chamadas à API.
+
+- Tentativa 1: erro de compilação simples (import Collectors ausente).
+- Tentativa 2 (correção): a RESPOSTA do modelo estava correta, mas um bug no
+  próprio pipeline (gerar_codigo.py) corrompeu o arquivo ao escrevê-lo — a
+  resposta continha ""\r\n"" literal dentro do valor JSON, e a tradução de
+  quebra de linha do Python em modo texto no Windows duplicou os finais de
+  linha. A verificação de integridade pós-escrita (desenhada exatamente para
+  pegar isso) funcionou e abortou antes de aplicar. Corrigido no SCRIPT
+  (normalização de quebras de linha antes de escrever/comparar), não no
+  conteúdo do modelo. Arquivo parcialmente corrompido revertido via
+  `git checkout`.
+- Tentativa 3 (correção, já com o script corrigido): aplicou corretamente.
+  Compilou, 30/30 testes JUnit passaram.
+
+Teste manual: CT040-CT042 e CT044 Aprovados (CT042 só após eu corrigir o nome
+de um campo no meu próprio teste). CT043 (notificação mensal) Não executado,
+mesma decisão de escopo de incrementos anteriores.
+
+REGRESSÃO COMPLETA (I1-I9, único incremento restante — teste final de todo o
+sistema): login/home (I1), busca de CEP (I2), cadastro de animal com
+restrição de papel (I3), edição da home (I4), bloqueio de escalonamento de
+privilégio (I5), solicitação de adoção (I6), aprovação de adoção (I7), marcar
+como adotado (I8), apadrinhamento de animal (I9) — TODOS confirmados
+funcionando sem regressão após I10.
+
+Taxa de aprovação (TA) de V10: 4/5 executados = 80%."
